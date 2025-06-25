@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, Platform } from 'react-native';
-import { MapPin, Filter, Calendar, ChevronRight } from 'lucide-react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, Platform, TextInput } from 'react-native';
+import { MapPin, Filter, Calendar, ChevronDown, ChevronRight, X } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { globalStyles } from '@/constants/theme';
 import EventCard from '@/components/EventCard';
 import SearchBar from '@/components/SearchBar';
-import FilterChip from '@/components/FilterChip';
 import LoadingIndicator from '@/components/LoadingIndicator';
 import EmptyState from '@/components/EmptyState';
 import LocationSelector from '@/components/LocationSelector';
 import useLocation from '@/hooks/useLocation';
 import useEvents from '@/hooks/useEvents';
 import useThemeStore from '@/hooks/useThemeStore';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 // Time filter options
 const timeFilterOptions = [
@@ -22,6 +22,26 @@ const timeFilterOptions = [
   { id: 'thisMonth', label: 'This Month' },
   { id: 'custom', label: 'Custom Date' },
 ];
+
+// Sort options
+const sortOptions = [
+  { id: 'relevance', label: 'Relevance' },
+  { id: 'distance', label: 'Distance' },
+  { id: 'date', label: 'Date' },
+];
+
+// Event categories
+const eventCategories = [
+  { id: 'all', label: 'All Events' },
+  { id: 'lecture', label: 'Lectures' },
+  { id: 'workshop', label: 'Workshops' },
+  { id: 'community', label: 'Community' },
+  { id: 'charity', label: 'Charity' },
+  { id: 'other', label: 'Other' },
+];
+
+// Languages
+const languages = ['All', 'English', 'Arabic', 'Urdu', 'Farsi', 'Turkish'];
 
 export default function EventsScreen() {
   const { location, locationName, loading: locationLoading } = useLocation();
@@ -34,27 +54,34 @@ export default function EventsScreen() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredEvents, setFilteredEvents] = useState(allEvents);
-  const [selectedFilter, setSelectedFilter] = useState('all');
   const [selectedTimeFilter, setSelectedTimeFilter] = useState('anytime');
   const [customLocation, setCustomLocation] = useState('');
   const [showTimeFilterModal, setShowTimeFilterModal] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
-
-  const categories = ['all', 'lecture', 'workshop', 'community', 'charity', 'other'];
+  const [showSortModal, setShowSortModal] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [customDate, setCustomDate] = useState(new Date());
+  const [sortBy, setSortBy] = useState('relevance');
 
   // Filter settings
   const [filterSettings, setFilterSettings] = useState({
-    categories: [] as string[],
-    languages: [] as string[],
-    sortBy: 'relevance',
+    category: 'all',
+    saved: false,
+    language: 'All',
+    proximity: 10, // in km
   });
 
   useEffect(() => {
-    let events = selectedFilter === 'nearby' ? nearbyEvents : 
-                 selectedFilter === 'saved' ? savedEvents : allEvents;
+    let events = allEvents;
     
-    if (selectedFilter !== 'all' && selectedFilter !== 'nearby' && selectedFilter !== 'saved') {
-      events = events.filter(event => event.category === selectedFilter);
+    // Apply saved filter
+    if (filterSettings.saved) {
+      events = savedEvents;
+    } else {
+      // Apply category filter
+      if (filterSettings.category !== 'all') {
+        events = events.filter(event => event.category === filterSettings.category);
+      }
     }
     
     // Apply time filter
@@ -80,10 +107,19 @@ export default function EventsScreen() {
             return eventDate >= today && eventDate <= thisWeekEnd;
           case 'thisMonth':
             return eventDate >= today && eventDate <= thisMonthEnd;
+          case 'custom':
+            return eventDate.toDateString() === customDate.toDateString();
           default:
             return true;
         }
       });
+    }
+    
+    // Apply language filter
+    if (filterSettings.language !== 'All') {
+      // In a real app, events would have a languages property
+      // This is a placeholder for when language data is available
+      // events = events.filter(event => event.languages?.includes(filterSettings.language));
     }
     
     // Apply search query
@@ -96,21 +132,73 @@ export default function EventsScreen() {
       );
     }
     
+    // Apply sorting
+    if (sortBy === 'distance' && location) {
+      events = [...events].sort((a, b) => {
+        const distanceA = calculateDistance(
+          location.coords.latitude,
+          location.coords.longitude,
+          a.latitude,
+          a.longitude
+        );
+        const distanceB = calculateDistance(
+          location.coords.latitude,
+          location.coords.longitude,
+          b.latitude,
+          b.longitude
+        );
+        return distanceA - distanceB;
+      });
+    } else if (sortBy === 'date') {
+      events = [...events].sort((a, b) => 
+        new Date(a.date).getTime() - new Date(b.date).getTime()
+      );
+    }
+    
     setFilteredEvents(events);
-  }, [searchQuery, selectedFilter, selectedTimeFilter, nearbyEvents, allEvents, savedEvents]);
+  }, [
+    searchQuery, 
+    selectedTimeFilter, 
+    customDate, 
+    filterSettings, 
+    sortBy, 
+    allEvents, 
+    savedEvents, 
+    nearbyEvents, 
+    location
+  ]);
+
+  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371; // Radius of the earth in km
+    const dLat = deg2rad(lat2 - lat1);
+    const dLon = deg2rad(lon2 - lon1);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(deg2rad(lat1)) *
+        Math.cos(deg2rad(lat2)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distance = R * c; // Distance in km
+    return distance;
+  };
+
+  const deg2rad = (deg) => {
+    return deg * (Math.PI / 180);
+  };
 
   const clearSearch = () => {
     setSearchQuery('');
   };
 
-  const handleLocationSelect = (location: string) => {
+  const handleLocationSelect = (location) => {
     setCustomLocation(location);
     // In a real app, this would trigger a location-based search
   };
 
   const isLoading = locationLoading || eventsLoading;
 
-  const renderTimeFilterOption = ({ item }: { item: typeof timeFilterOptions[0] }) => (
+  const renderTimeFilterOption = ({ item }) => (
     <TouchableOpacity 
       style={[
         styles.timeFilterOption,
@@ -118,7 +206,11 @@ export default function EventsScreen() {
       ]}
       onPress={() => {
         setSelectedTimeFilter(item.id);
-        setShowTimeFilterModal(false);
+        if (item.id === 'custom') {
+          setShowDatePicker(true);
+        } else {
+          setShowTimeFilterModal(false);
+        }
       }}
     >
       <Text 
@@ -136,8 +228,16 @@ export default function EventsScreen() {
   );
 
   const getSelectedTimeFilterLabel = () => {
+    if (selectedTimeFilter === 'custom') {
+      return `${customDate.toLocaleDateString()}`;
+    }
     const option = timeFilterOptions.find(option => option.id === selectedTimeFilter);
     return option ? option.label : 'Anytime';
+  };
+
+  const getSelectedSortLabel = () => {
+    const option = sortOptions.find(option => option.id === sortBy);
+    return option ? option.label : 'Relevance';
   };
 
   return (
@@ -168,14 +268,13 @@ export default function EventsScreen() {
               styles.filterButton,
               isDarkMode && styles.filterButtonDark
             ]}
-            onPress={() => setSelectedFilter('nearby')}
+            onPress={() => setShowSortModal(true)}
           >
-            <MapPin size={18} color={isDarkMode ? Colors.white : Colors.text} />
             <Text style={[
               styles.filterButtonText,
-              isDarkMode && styles.filterButtonTextDark,
-              selectedFilter === 'nearby' && styles.activeFilterText
-            ]}>Nearby</Text>
+              isDarkMode && styles.filterButtonTextDark
+            ]}>Sort: {getSelectedSortLabel()}</Text>
+            <ChevronDown size={16} color={isDarkMode ? Colors.white : Colors.text} />
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -183,14 +282,13 @@ export default function EventsScreen() {
               styles.filterButton,
               isDarkMode && styles.filterButtonDark
             ]}
-            onPress={() => setSelectedFilter('all')}
+            onPress={() => setShowFilterModal(true)}
           >
             <Filter size={18} color={isDarkMode ? Colors.white : Colors.text} />
             <Text style={[
               styles.filterButtonText,
-              isDarkMode && styles.filterButtonTextDark,
-              selectedFilter === 'all' && styles.activeFilterText
-            ]}>All Events</Text>
+              isDarkMode && styles.filterButtonTextDark
+            ]}>Filter</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -209,26 +307,6 @@ export default function EventsScreen() {
         </View>
       </View>
 
-      {/* Category Filters */}
-      <FlatList
-        data={['saved', ...categories]}
-        renderItem={({ item }) => (
-          <FilterChip
-            label={
-              item === 'all' ? 'All Events' : 
-              item === 'saved' ? 'Saved' :
-              item.charAt(0).toUpperCase() + item.slice(1)
-            }
-            selected={selectedFilter === item}
-            onPress={() => setSelectedFilter(item)}
-          />
-        )}
-        keyExtractor={(item) => item}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filtersContainer}
-      />
-
       {isLoading ? (
         <LoadingIndicator message="Finding events..." />
       ) : (
@@ -243,9 +321,9 @@ export default function EventsScreen() {
               message={
                 searchQuery
                   ? "We couldn't find any events matching your search."
-                  : selectedFilter === 'saved'
+                  : filterSettings.saved
                   ? "You haven't saved any events yet."
-                  : "We couldn't find any events in this category."
+                  : "We couldn't find any events matching your filters."
               }
             />
           }
@@ -283,6 +361,288 @@ export default function EventsScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Sort Modal */}
+      <Modal
+        visible={showSortModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowSortModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[
+            styles.modalContent,
+            isDarkMode && styles.modalContentDark,
+            { height: 300 }
+          ]}>
+            <View style={styles.modalHeader}>
+              <Text style={[
+                styles.modalTitle,
+                isDarkMode && styles.modalTitleDark
+              ]}>Sort By</Text>
+              <TouchableOpacity onPress={() => setShowSortModal(false)}>
+                <Text style={styles.modalCloseButton}>Close</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {sortOptions.map((option) => (
+              <TouchableOpacity 
+                key={option.id}
+                style={[
+                  styles.timeFilterOption,
+                  sortBy === option.id && styles.selectedTimeFilterOption
+                ]}
+                onPress={() => {
+                  setSortBy(option.id);
+                  setShowSortModal(false);
+                }}
+              >
+                <Text 
+                  style={[
+                    styles.timeFilterOptionText,
+                    sortBy === option.id && styles.selectedTimeFilterOptionText
+                  ]}
+                >
+                  {option.label}
+                </Text>
+                {sortBy === option.id && (
+                  <View style={styles.checkmark} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Filter Modal */}
+      <Modal
+        visible={showFilterModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowFilterModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[
+            styles.modalContent,
+            isDarkMode && styles.modalContentDark,
+            { height: 500 }
+          ]}>
+            <View style={styles.modalHeader}>
+              <Text style={[
+                styles.modalTitle,
+                isDarkMode && styles.modalTitleDark
+              ]}>Filter Events</Text>
+              <TouchableOpacity onPress={() => setShowFilterModal(false)}>
+                <Text style={styles.modalCloseButton}>Close</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.filterSection}>
+              <Text style={[
+                styles.filterSectionTitle,
+                isDarkMode && styles.filterSectionTitleDark
+              ]}>Event Type</Text>
+              
+              <View style={styles.filterChipsContainer}>
+                {eventCategories.map((category) => (
+                  <TouchableOpacity
+                    key={category.id}
+                    style={[
+                      styles.filterChip,
+                      filterSettings.category === category.id && styles.filterChipSelected
+                    ]}
+                    onPress={() => setFilterSettings(prev => ({
+                      ...prev,
+                      category: category.id,
+                      saved: false // Unselect saved when selecting a category
+                    }))}
+                  >
+                    <Text style={[
+                      styles.filterChipText,
+                      filterSettings.category === category.id && styles.filterChipTextSelected
+                    ]}>
+                      {category.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+            
+            <View style={styles.filterSection}>
+              <Text style={[
+                styles.filterSectionTitle,
+                isDarkMode && styles.filterSectionTitleDark
+              ]}>Saved Events</Text>
+              
+              <TouchableOpacity
+                style={[
+                  styles.savedFilterButton,
+                  filterSettings.saved && styles.savedFilterButtonSelected
+                ]}
+                onPress={() => setFilterSettings(prev => ({
+                  ...prev,
+                  saved: !prev.saved,
+                  category: 'all' // Reset category when toggling saved
+                }))}
+              >
+                <Text style={[
+                  styles.savedFilterButtonText,
+                  filterSettings.saved && styles.savedFilterButtonTextSelected
+                ]}>
+                  Show only saved events
+                </Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.filterSection}>
+              <Text style={[
+                styles.filterSectionTitle,
+                isDarkMode && styles.filterSectionTitleDark
+              ]}>Language</Text>
+              
+              <View style={styles.filterChipsContainer}>
+                {languages.map((language) => (
+                  <TouchableOpacity
+                    key={language}
+                    style={[
+                      styles.filterChip,
+                      filterSettings.language === language && styles.filterChipSelected
+                    ]}
+                    onPress={() => setFilterSettings(prev => ({
+                      ...prev,
+                      language
+                    }))}
+                  >
+                    <Text style={[
+                      styles.filterChipText,
+                      filterSettings.language === language && styles.filterChipTextSelected
+                    ]}>
+                      {language}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+            
+            <View style={styles.filterSection}>
+              <Text style={[
+                styles.filterSectionTitle,
+                isDarkMode && styles.filterSectionTitleDark
+              ]}>Proximity (km)</Text>
+              
+              <View style={styles.proximityContainer}>
+                <TextInput
+                  style={styles.proximityInput}
+                  keyboardType="numeric"
+                  value={filterSettings.proximity.toString()}
+                  onChangeText={(text) => setFilterSettings(prev => ({
+                    ...prev,
+                    proximity: parseInt(text) || 10
+                  }))}
+                />
+                <Text style={[
+                  styles.proximityLabel,
+                  isDarkMode && styles.proximityLabelDark
+                ]}>
+                  km
+                </Text>
+              </View>
+            </View>
+            
+            <View style={styles.filterButtons}>
+              <TouchableOpacity 
+                style={styles.resetButton} 
+                onPress={() => setFilterSettings({
+                  category: 'all',
+                  saved: false,
+                  language: 'All',
+                  proximity: 10
+                })}
+              >
+                <Text style={styles.buttonText}>Reset</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.applyButton} 
+                onPress={() => setShowFilterModal(false)}
+              >
+                <Text style={styles.buttonText}>Apply</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Date Picker for Custom Date */}
+      {showDatePicker && (
+        <Modal
+          transparent={true}
+          visible={showDatePicker}
+          animationType="fade"
+          onRequestClose={() => setShowDatePicker(false)}
+        >
+          <View style={styles.datePickerModalOverlay}>
+            <View style={[
+              styles.datePickerContainer,
+              isDarkMode && styles.datePickerContainerDark
+            ]}>
+              <View style={styles.datePickerHeader}>
+                <Text style={[
+                  styles.datePickerTitle,
+                  isDarkMode && styles.datePickerTitleDark
+                ]}>
+                  Select Date
+                </Text>
+              </View>
+              
+              {Platform.OS === 'ios' ? (
+                <DateTimePicker
+                  value={customDate}
+                  mode="date"
+                  display="spinner"
+                  onChange={(event, selectedDate) => {
+                    if (selectedDate) {
+                      setCustomDate(selectedDate);
+                    }
+                  }}
+                  style={styles.datePicker}
+                />
+              ) : (
+                <DateTimePicker
+                  value={customDate}
+                  mode="date"
+                  display="default"
+                  onChange={(event, selectedDate) => {
+                    setShowDatePicker(false);
+                    if (selectedDate) {
+                      setCustomDate(selectedDate);
+                    }
+                  }}
+                />
+              )}
+              
+              {Platform.OS === 'ios' && (
+                <View style={styles.datePickerButtons}>
+                  <TouchableOpacity
+                    style={styles.datePickerCancelButton}
+                    onPress={() => setShowDatePicker(false)}
+                  >
+                    <Text style={styles.datePickerButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.datePickerConfirmButton}
+                    onPress={() => {
+                      setShowDatePicker(false);
+                      setShowTimeFilterModal(false);
+                    }}
+                  >
+                    <Text style={styles.datePickerButtonText}>Confirm</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -315,6 +675,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
+    flex: 1,
   },
   filterButtonDark: {
     backgroundColor: '#2a2a2a',
@@ -323,6 +684,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.text,
     marginLeft: 6,
+    flex: 1,
   },
   filterButtonTextDark: {
     color: Colors.white,
@@ -330,10 +692,6 @@ const styles = StyleSheet.create({
   activeFilterText: {
     color: Colors.primary,
     fontWeight: '600',
-  },
-  filtersContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 8,
   },
   listContent: {
     paddingBottom: 16,
@@ -400,5 +758,158 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     backgroundColor: Colors.primary,
+  },
+  filterSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  filterSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: 12,
+  },
+  filterSectionTitleDark: {
+    color: Colors.white,
+  },
+  filterChipsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: Colors.card,
+    marginBottom: 8,
+  },
+  filterChipSelected: {
+    backgroundColor: Colors.primary,
+  },
+  filterChipText: {
+    fontSize: 14,
+    color: Colors.text,
+  },
+  filterChipTextSelected: {
+    color: Colors.white,
+  },
+  savedFilterButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: Colors.card,
+    alignItems: 'center',
+  },
+  savedFilterButtonSelected: {
+    backgroundColor: Colors.primary,
+  },
+  savedFilterButtonText: {
+    fontSize: 14,
+    color: Colors.text,
+  },
+  savedFilterButtonTextSelected: {
+    color: Colors.white,
+  },
+  proximityContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  proximityInput: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    width: 80,
+    fontSize: 16,
+  },
+  proximityLabel: {
+    marginLeft: 8,
+    fontSize: 16,
+    color: Colors.text,
+  },
+  proximityLabelDark: {
+    color: Colors.white,
+  },
+  filterButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  resetButton: {
+    flex: 1,
+    backgroundColor: '#f44336',
+    padding: 15,
+    borderRadius: 8,
+    marginRight: 10,
+    alignItems: 'center',
+  },
+  applyButton: {
+    flex: 1,
+    backgroundColor: Colors.primary,
+    padding: 15,
+    borderRadius: 8,
+    marginLeft: 10,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: Colors.white,
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  datePickerModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  datePickerContainer: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: 16,
+    width: '80%',
+  },
+  datePickerContainerDark: {
+    backgroundColor: '#1e1e1e',
+  },
+  datePickerHeader: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  datePickerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  datePickerTitleDark: {
+    color: Colors.white,
+  },
+  datePicker: {
+    width: '100%',
+  },
+  datePickerButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 16,
+  },
+  datePickerCancelButton: {
+    backgroundColor: '#f44336',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  datePickerConfirmButton: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  datePickerButtonText: {
+    color: Colors.white,
+    fontWeight: '600',
   },
 });

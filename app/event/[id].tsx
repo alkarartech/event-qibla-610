@@ -49,7 +49,9 @@ export default function EventDetailScreen() {
           ? 'https://apps.apple.com/us/app/salah-journal/id6747736982'
           : 'https://play.google.com/store/apps/details?id=com.kamalaldeen.mosquefinder';
         
-        const message = `Check out this event: ${event.title} at ${event.mosque_name} on ${event.date} at ${event.time}\n\nDownload the Mosque Finder app to see more events: ${appUrl}`;
+        const message = `Check out this event: ${event.title} at ${event.mosque_name} on ${event.date} at ${event.time}
+
+Download the Mosque Finder app to see more events: ${appUrl}`;
         
         await Share.share({
           message,

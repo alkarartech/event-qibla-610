@@ -72,6 +72,11 @@ export default function HomeScreen() {
     // In a real app, this would trigger a location-based search
   };
 
+  const handleCalendarPress = () => {
+    // Navigate to the full calendar screen instead of showing a modal
+    router.push('/calendar');
+  };
+
   return (
     <ScrollView 
       style={[
@@ -89,7 +94,7 @@ export default function HomeScreen() {
         
         <TouchableOpacity 
           style={styles.calendarButton}
-          onPress={() => setShowCalendar(true)}
+          onPress={handleCalendarPress}
         >
           <Calendar size={24} color={isDarkMode ? Colors.white : Colors.primary} />
         </TouchableOpacity>
@@ -272,39 +277,6 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.footer} />
-
-      {/* Calendar Modal */}
-      <Modal
-        visible={showCalendar}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowCalendar(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[
-            styles.calendarModalContent,
-            isDarkMode && styles.calendarModalContentDark
-          ]}>
-            <View style={styles.calendarModalHeader}>
-              <Text style={[
-                styles.calendarModalTitle,
-                isDarkMode && styles.calendarModalTitleDark
-              ]}>Your Events Calendar</Text>
-              <TouchableOpacity onPress={() => setShowCalendar(false)}>
-                <X size={24} color={isDarkMode ? Colors.white : Colors.text} />
-              </TouchableOpacity>
-            </View>
-            
-            <CalendarView 
-              events={savedEvents} 
-              onEventPress={(eventId) => {
-                setShowCalendar(false);
-                router.push(`/event/${eventId}`);
-              }}
-            />
-          </View>
-        </View>
-      </Modal>
     </ScrollView>
   );
 }

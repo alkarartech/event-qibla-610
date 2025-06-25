@@ -22,20 +22,16 @@ const useThemeStore = create<ThemeState>()(
         const { isDarkMode } = get();
         if (isDarkMode) {
           return {
-            primary: '#4CAF50',
+            ...Colors,
+            primary: Colors.primary,
             primaryLight: '#2C5F2E',
-            secondary: '#1976D2',
+            secondary: Colors.secondary,
             secondaryLight: '#0D3B69',
             background: '#121212',
             card: '#1E1E1E',
             text: '#FFFFFF',
             textSecondary: '#AAAAAA',
             border: '#333333',
-            success: '#4CAF50',
-            error: '#F44336',
-            white: '#FFFFFF',
-            black: '#000000',
-            transparent: 'transparent',
           };
         }
         return Colors;

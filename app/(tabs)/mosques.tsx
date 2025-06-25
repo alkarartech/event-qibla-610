@@ -8,6 +8,7 @@ import SearchBar from '@/components/SearchBar';
 import FilterChip from '@/components/FilterChip';
 import LoadingIndicator from '@/components/LoadingIndicator';
 import EmptyState from '@/components/EmptyState';
+import LocationSelector from '@/components/LocationSelector';
 import useLocation from '@/hooks/useLocation';
 import useMosques from '@/hooks/useMosques';
 import useThemeStore from '@/hooks/useThemeStore';
@@ -25,6 +26,7 @@ export default function MosquesScreen() {
   const [filteredMosques, setFilteredMosques] = useState(allMosques);
   const [selectedFilter, setSelectedFilter] = useState('nearby');
   const [showFilterModal, setShowFilterModal] = useState(false);
+  const [customLocation, setCustomLocation] = useState('');
   
   // Filter settings
   const [filterSettings, setFilterSettings] = useState({
@@ -75,6 +77,11 @@ export default function MosquesScreen() {
     setSearchQuery('');
   };
 
+  const handleLocationSelect = (location) => {
+    setCustomLocation(location);
+    // In a real app, this would trigger a location-based search
+  };
+
   const isLoading = locationLoading || mosquesLoading;
 
   return (
@@ -84,13 +91,10 @@ export default function MosquesScreen() {
     ]}>
       {/* Location Header */}
       <View style={styles.locationContainer}>
-        <MapPin size={20} color={Colors.primary} />
-        <Text style={[
-          styles.locationText,
-          isDarkMode && styles.locationTextDark
-        ]}>
-          {locationLoading ? 'Getting your location...' : locationName}
-        </Text>
+        <LocationSelector 
+          currentLocation={customLocation || locationName || 'Current Location'}
+          onLocationSelect={handleLocationSelect}
+        />
       </View>
 
       {/* Search Bar */}
@@ -263,19 +267,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#121212',
   },
   locationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 8,
-  },
-  locationText: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginLeft: 6,
-  },
-  locationTextDark: {
-    color: '#AAAAAA',
   },
   searchContainer: {
     paddingBottom: 8,
@@ -293,6 +287,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
+    flex: 1,
   },
   filterButtonDark: {
     backgroundColor: '#2a2a2a',
