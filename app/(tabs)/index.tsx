@@ -8,7 +8,6 @@ import MosqueCard from '@/components/MosqueCard';
 import EventCard from '@/components/EventCard';
 import LoadingIndicator from '@/components/LoadingIndicator';
 import EmptyState from '@/components/EmptyState';
-import LocationSelector from '@/components/LocationSelector';
 import useLocation from '@/hooks/useLocation';
 import useMosques from '@/hooks/useMosques';
 import useEvents from '@/hooks/useEvents';
@@ -34,7 +33,6 @@ export default function HomeScreen() {
     10
   );
 
-  const [customLocation, setCustomLocation] = useState('');
   const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
 
   const isLoading = locationLoading || mosquesLoading || eventsLoading;
@@ -68,11 +66,6 @@ export default function HomeScreen() {
     <EventCard event={item} compact />
   );
 
-  const handleLocationSelect = (location: string) => {
-    setCustomLocation(location);
-    // In a real app, this would trigger a location-based search
-  };
-
   const handleCalendarPress = () => {
     // Navigate to the full calendar screen
     router.push('/calendar');
@@ -86,12 +79,12 @@ export default function HomeScreen() {
       ]} 
       showsVerticalScrollIndicator={false}
     >
-      {/* Location Header */}
-      <View style={styles.locationContainer}>
-        <LocationSelector 
-          currentLocation={customLocation || locationName || 'Current Location'}
-          onLocationSelect={handleLocationSelect}
-        />
+      {/* Header with Calendar Button */}
+      <View style={styles.headerContainer}>
+        <Text style={[
+          styles.welcomeTitle,
+          isDarkMode && styles.welcomeTitleDark
+        ]}>Assalamu Alaikum</Text>
         
         <TouchableOpacity 
           style={styles.calendarButton}
@@ -101,23 +94,16 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Welcome Section */}
-      <View style={styles.welcomeSection}>
-        <Text style={[
-          styles.welcomeTitle,
-          isDarkMode && styles.welcomeTitleDark
-        ]}>Assalamu Alaikum</Text>
-        <Text style={[
-          styles.welcomeSubtitle,
-          isDarkMode && styles.welcomeSubtitleDark
-        ]}>Find mosques and events near you</Text>
-      </View>
+      <Text style={[
+        styles.welcomeSubtitle,
+        isDarkMode && styles.welcomeSubtitleDark
+      ]}>Find mosques and events near you</Text>
 
       {isLoading ? (
         <LoadingIndicator message="Finding mosques and events near you..." />
       ) : (
         <>
-          {/* Upcoming Events Section - Moved to top */}
+          {/* Upcoming Events Section - At the very top */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={[
@@ -290,26 +276,20 @@ const styles = StyleSheet.create({
   containerDark: {
     backgroundColor: '#121212',
   },
-  locationContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
+  headerContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
   calendarButton: {
     padding: 8,
-  },
-  welcomeSection: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 24,
   },
   welcomeTitle: {
     fontSize: 24,
     fontWeight: '700',
     color: Colors.text,
-    marginBottom: 4,
   },
   welcomeTitleDark: {
     color: Colors.white,
@@ -317,6 +297,8 @@ const styles = StyleSheet.create({
   welcomeSubtitle: {
     fontSize: 16,
     color: Colors.textSecondary,
+    paddingHorizontal: 16,
+    marginBottom: 24,
   },
   welcomeSubtitleDark: {
     color: '#AAAAAA',

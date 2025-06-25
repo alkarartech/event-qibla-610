@@ -1,8 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, Image, Share, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, Image, Share, Platform, Modal, TextInput, Alert } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useRouter } from 'expo-router';
-import { MapPin, Calendar, Clock, User, Phone, Share2, Heart } from 'lucide-react-native';
+import { MapPin, Calendar, Clock, User, Phone, Share2, Heart, Star, Mail } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { globalStyles } from '@/constants/theme';
 import LoadingIndicator from '@/components/LoadingIndicator';
@@ -13,11 +13,29 @@ import useThemeStore from '@/hooks/useThemeStore';
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const { getEventById, saveEvent, unsaveEvent, isEventSaved, loading } = useEvents();
+  const { getEventById, saveEvent, unsaveEvent, isEventSaved, loading, rateEvent } = useEvents();
   const { isDarkMode, use24HourFormat } = useThemeStore();
 
   const event = getEventById(id as string);
   const saved = event ? isEventSaved(event.id) : false;
+  
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [rating, setRating] = useState(5);
+  const [feedback, setFeedback] = useState('');
+  const [hasAttended, setHasAttended] = useState(false);
+  
+  // Check if event date has passed to determine if user can rate it
+  useEffect(() => {
+    if (event) {
+      const eventDate = new Date(event.date);
+      const today = new Date();
+      
+      // If event date has passed, user can rate it
+      if (eventDate < today) {
+        setHasAttended(true);
+      }
+    }
+  }, [event]);
 
   const handleMosquePress = () => {
     if (event) {
@@ -45,6 +63,17 @@ export default function EventDetailScreen() {
   const handleSharePress = async () => {
     if (event) {
       try {
+        // Check if Web Share API is available (for web)
+        if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.share) {
+          await navigator.share({
+            title: event.title,
+            text: `Check out this event: ${event.title} at ${event.mosque_name} on ${event.date} at ${event.time}`,
+            url: window.location.href,
+          });
+          return;
+        }
+        
+        // Native share for mobile platforms
         const appUrl = Platform.OS === 'ios' 
           ? 'https://apps.apple.com/us/app/salah-journal/id6747736982'
           : 'https://play.google.com/store/apps/details?id=com.kamalaldeen.mosquefinder';
@@ -59,6 +88,11 @@ Download the Mosque Finder app to see more events: ${appUrl}`;
         });
       } catch (error) {
         console.error('Error sharing event:', error);
+        Alert.alert(
+          "Sharing Failed",
+          "Unable to share this event. Please try again later.",
+          [{ text: "OK" }]
+        );
       }
     }
   };
@@ -71,6 +105,34 @@ Download the Mosque Finder app to see more events: ${appUrl}`;
     } else {
       saveEvent(event.id);
     }
+  };
+  
+  const handleRateEvent = () => {
+    setShowRatingModal(true);
+  };
+  
+  const submitRating = () => {
+    if (!event) return;
+    
+    rateEvent(event.id, rating, feedback);
+    
+    // Send email to mosque with feedback
+    if (event.contact && event.contact.includes('@')) {
+      const subject = `Event Feedback: ${event.title}`;
+      const body = `Event: ${event.title}
+Date: ${event.date}
+Rating: ${rating}/5
+Feedback: ${feedback}`;
+      
+      Linking.openURL(`mailto:${event.contact}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+    }
+    
+    setShowRatingModal(false);
+    Alert.alert(
+      "Thank You!",
+      "Your feedback has been submitted and sent to the mosque.",
+      [{ text: "OK" }]
+    );
   };
 
   if (loading) {
@@ -249,8 +311,102 @@ Download the Mosque Finder app to see more events: ${appUrl}`;
               <Text style={styles.actionButtonOutlineText}>Share</Text>
             </TouchableOpacity>
           </View>
+          
+          {hasAttended && (
+            <TouchableOpacity 
+              style={[styles.rateButton, globalStyles.shadow]} 
+              onPress={handleRateEvent}
+            >
+              <Star size={20} color={Colors.white} style={styles.actionButtonIcon} />
+              <Text style={styles.rateButtonText}>Rate This Event</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
+      
+      {/* Rating Modal */}
+      <Modal
+        visible={showRatingModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowRatingModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[
+            styles.ratingModalContent,
+            isDarkMode && styles.ratingModalContentDark
+          ]}>
+            <Text style={[
+              styles.ratingModalTitle,
+              isDarkMode && styles.ratingModalTitleDark
+            ]}>
+              Rate This Event
+            </Text>
+            
+            <View style={styles.starsContainer}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <TouchableOpacity
+                  key={star}
+                  onPress={() => setRating(star)}
+                >
+                  <Star
+                    size={36}
+                    color={Colors.primary}
+                    fill={star <= rating ? Colors.primary : 'none'}
+                    style={styles.starIcon}
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+            
+            <Text style={[
+              styles.feedbackLabel,
+              isDarkMode && styles.feedbackLabelDark
+            ]}>
+              Your Feedback
+            </Text>
+            
+            <TextInput
+              style={[
+                styles.feedbackInput,
+                isDarkMode && styles.feedbackInputDark
+              ]}
+              placeholder="Share your experience..."
+              placeholderTextColor={isDarkMode ? '#777' : '#999'}
+              value={feedback}
+              onChangeText={setFeedback}
+              multiline
+              numberOfLines={4}
+            />
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setShowRatingModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.submitButton}
+                onPress={submitRating}
+              >
+                <Text style={styles.submitButtonText}>Submit</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.emailInfoContainer}>
+              <Mail size={16} color={isDarkMode ? '#AAA' : '#777'} />
+              <Text style={[
+                styles.emailInfoText,
+                isDarkMode && styles.emailInfoTextDark
+              ]}>
+                Your feedback will be sent to the mosque
+              </Text>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -372,5 +528,121 @@ const styles = StyleSheet.create({
   },
   actionButtonIcon: {
     marginRight: 8,
+  },
+  rateButton: {
+    backgroundColor: '#FF9800',
+    paddingVertical: 12,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  rateButtonText: {
+    color: Colors.white,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  ratingModalContent: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 24,
+    width: '85%',
+    ...globalStyles.shadow,
+  },
+  ratingModalContentDark: {
+    backgroundColor: '#1E1E1E',
+  },
+  ratingModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.text,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  ratingModalTitleDark: {
+    color: Colors.white,
+  },
+  starsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  starIcon: {
+    marginHorizontal: 6,
+  },
+  feedbackLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: 8,
+  },
+  feedbackLabelDark: {
+    color: Colors.white,
+  },
+  feedbackInput: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: Colors.text,
+    textAlignVertical: 'top',
+    minHeight: 100,
+    marginBottom: 20,
+  },
+  feedbackInputDark: {
+    borderColor: '#444',
+    color: Colors.white,
+    backgroundColor: '#2a2a2a',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: Colors.text,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  submitButton: {
+    flex: 1,
+    backgroundColor: Colors.primary,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  submitButtonText: {
+    color: Colors.white,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emailInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+  },
+  emailInfoText: {
+    fontSize: 12,
+    color: '#777',
+    marginLeft: 6,
+  },
+  emailInfoTextDark: {
+    color: '#AAA',
   },
 });

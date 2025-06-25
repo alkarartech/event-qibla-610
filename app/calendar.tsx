@@ -123,6 +123,10 @@ export default function CalendarScreen() {
         break;
     }
     setCurrentDate(newDate);
+    // Also update selected date in day view
+    if (viewMode === 'day') {
+      setSelectedDate(newDate);
+    }
   };
   
   // Navigate to next period based on current view mode
@@ -143,6 +147,10 @@ export default function CalendarScreen() {
         break;
     }
     setCurrentDate(newDate);
+    // Also update selected date in day view
+    if (viewMode === 'day') {
+      setSelectedDate(newDate);
+    }
   };
   
   // Format date based on view mode
@@ -403,6 +411,37 @@ ${hijriDate.year} Hijri`;
             isDarkMode && styles.monthViewEventsTitleDark
           ]}>
             Events for {selectedDate.toLocaleDateString()}
+          </Text>
+          
+          {/* Islamic Events Section */}
+          {islamicEventsForSelectedDate.length > 0 && (
+            <View style={styles.islamicEventsSection}>
+              <Text style={[
+                styles.islamicEventsSectionTitle,
+                isDarkMode && styles.islamicEventsSectionTitleDark
+              ]}>
+                Islamic Events:
+              </Text>
+              {islamicEventsForSelectedDate.map((event, index) => (
+                <Text 
+                  key={`islamic-${index}`}
+                  style={[
+                    styles.islamicEventText,
+                    isDarkMode && styles.islamicEventTextDark
+                  ]}
+                >
+                  • {event.name}
+                </Text>
+              ))}
+            </View>
+          )}
+          
+          {/* User Events Section */}
+          <Text style={[
+            styles.userEventsSectionTitle,
+            isDarkMode && styles.userEventsSectionTitleDark
+          ]}>
+            Your Events:
           </Text>
           
           {eventsForSelectedDate.length > 0 ? (
@@ -1275,5 +1314,29 @@ const styles = StyleSheet.create({
   },
   monthViewEventItemDark: {
     backgroundColor: '#1E1E1E',
+  },
+  islamicEventsSection: {
+    marginBottom: 16,
+    padding: 12,
+    backgroundColor: '#FCE4EC',
+    borderRadius: 8,
+  },
+  islamicEventsSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#E91E63',
+    marginBottom: 8,
+  },
+  islamicEventsSectionTitleDark: {
+    color: '#F48FB1',
+  },
+  userEventsSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: 12,
+  },
+  userEventsSectionTitleDark: {
+    color: Colors.white,
   },
 });

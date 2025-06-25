@@ -11,6 +11,13 @@ interface EventsState {
   error: string | null;
 }
 
+interface EventRating {
+  eventId: string;
+  rating: number;
+  feedback: string;
+  date: string;
+}
+
 export default function useEvents(
   latitude?: number,
   longitude?: number,
@@ -23,10 +30,13 @@ export default function useEvents(
     loading: true,
     error: null,
   });
+  
+  const [eventRatings, setEventRatings] = useState<EventRating[]>([]);
 
   // Load saved events on mount
   useEffect(() => {
     loadSavedEvents();
+    loadEventRatings();
   }, []);
 
   // Load saved events from AsyncStorage
@@ -46,6 +56,18 @@ export default function useEvents(
       console.error('Error loading saved events:', error);
     }
   }, []);
+  
+  // Load event ratings from AsyncStorage
+  const loadEventRatings = async () => {
+    try {
+      const ratingsData = await AsyncStorage.getItem('eventRatings');
+      if (ratingsData) {
+        setEventRatings(JSON.parse(ratingsData));
+      }
+    } catch (error) {
+      console.error('Error loading event ratings:', error);
+    }
+  };
 
   // Save an event
   const saveEvent = async (eventId: string) => {
@@ -93,6 +115,40 @@ export default function useEvents(
   // Check if an event is saved
   const isEventSaved = (eventId: string): boolean => {
     return state.savedEvents.some(event => event.id === eventId);
+  };
+  
+  // Rate an event
+  const rateEvent = async (eventId: string, rating: number, feedback: string) => {
+    try {
+      const newRating: EventRating = {
+        eventId,
+        rating,
+        feedback,
+        date: new Date().toISOString(),
+      };
+      
+      // Remove any existing rating for this event
+      const updatedRatings = eventRatings.filter(r => r.eventId !== eventId);
+      
+      // Add the new rating
+      const newRatings = [...updatedRatings, newRating];
+      
+      // Save to AsyncStorage
+      await AsyncStorage.setItem('eventRatings', JSON.stringify(newRatings));
+      
+      // Update state
+      setEventRatings(newRatings);
+      
+      return true;
+    } catch (error) {
+      console.error('Error rating event:', error);
+      return false;
+    }
+  };
+  
+  // Get rating for an event
+  const getEventRating = (eventId: string): EventRating | undefined => {
+    return eventRatings.find(rating => rating.eventId === eventId);
   };
 
   // Update nearby events when location changes
@@ -151,5 +207,7 @@ export default function useEvents(
     unsaveEvent,
     isEventSaved,
     refreshSavedEvents: loadSavedEvents,
+    rateEvent,
+    getEventRating,
   };
 }
