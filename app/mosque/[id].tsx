@@ -10,6 +10,7 @@ import LoadingIndicator from '@/components/LoadingIndicator';
 import EmptyState from '@/components/EmptyState';
 import useMosques from '@/hooks/useMosques';
 import useEvents from '@/hooks/useEvents';
+import { getPrayerTimes } from '@/utils/prayerTimes';
 
 export default function MosqueDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -20,6 +21,10 @@ export default function MosqueDetailScreen() {
   const mosqueEvents = mosque ? getEventsByMosqueId(mosque.id) : [];
 
   const isLoading = mosquesLoading || eventsLoading;
+
+  // Calculate prayer times based on mosque location and denomination
+  const calculatedPrayerTimes = mosque ? 
+    getPrayerTimes(mosque.latitude, mosque.longitude, mosque.denomination) : null;
 
   const handlePhonePress = () => {
     if (mosque?.phone) {
@@ -66,6 +71,12 @@ export default function MosqueDetailScreen() {
       <View style={styles.content}>
         <Text style={styles.name}>{mosque.name}</Text>
         
+        {mosque.denomination && (
+          <View style={styles.denominationTag}>
+            <Text style={styles.denominationText}>{mosque.denomination}</Text>
+          </View>
+        )}
+        
         <View style={styles.detailsContainer}>
           <View style={styles.detailRow}>
             <MapPin size={20} color={Colors.primary} />
@@ -96,7 +107,43 @@ export default function MosqueDetailScreen() {
           </TouchableOpacity>
         </View>
 
-        {mosque.prayer_times && (
+        {/* Display calculated prayer times if available, otherwise use stored ones */}
+        {calculatedPrayerTimes ? (
+          <View style={[styles.prayerTimesCard, globalStyles.shadow]}>
+            <Text style={styles.cardTitle}>Prayer Times (Calculated)</Text>
+            <Text style={styles.calculationMethod}>
+              Using {mosque.denomination === 'Shia' ? 'Jafari' : 'MWL'} calculation method
+            </Text>
+            <View style={styles.prayerTimesGrid}>
+              <View style={styles.prayerTimeItem}>
+                <Text style={styles.prayerName}>Fajr</Text>
+                <Text style={styles.prayerTime}>{calculatedPrayerTimes.fajr}</Text>
+              </View>
+              <View style={styles.prayerTimeItem}>
+                <Text style={styles.prayerName}>Dhuhr</Text>
+                <Text style={styles.prayerTime}>{calculatedPrayerTimes.dhuhr}</Text>
+              </View>
+              <View style={styles.prayerTimeItem}>
+                <Text style={styles.prayerName}>Asr</Text>
+                <Text style={styles.prayerTime}>{calculatedPrayerTimes.asr}</Text>
+              </View>
+              <View style={styles.prayerTimeItem}>
+                <Text style={styles.prayerName}>Maghrib</Text>
+                <Text style={styles.prayerTime}>{calculatedPrayerTimes.maghrib}</Text>
+              </View>
+              <View style={styles.prayerTimeItem}>
+                <Text style={styles.prayerName}>Isha</Text>
+                <Text style={styles.prayerTime}>{calculatedPrayerTimes.isha}</Text>
+              </View>
+              {mosque.prayer_times?.jummah && (
+                <View style={styles.prayerTimeItem}>
+                  <Text style={styles.prayerName}>Jummah</Text>
+                  <Text style={styles.prayerTime}>{mosque.prayer_times.jummah}</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        ) : mosque.prayer_times && (
           <PrayerTimesCard prayerTimes={mosque.prayer_times} />
         )}
 
@@ -145,7 +192,20 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     color: Colors.text,
+    marginBottom: 8,
+  },
+  denominationTag: {
+    alignSelf: 'flex-start',
+    backgroundColor: Colors.primaryLight,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 16,
     marginBottom: 16,
+  },
+  denominationText: {
+    color: Colors.primary,
+    fontSize: 14,
+    fontWeight: '500',
   },
   detailsContainer: {
     marginBottom: 24,
@@ -182,7 +242,41 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: Colors.text,
+    marginBottom: 8,
+  },
+  calculationMethod: {
+    fontSize: 14,
+    color: Colors.textSecondary,
     marginBottom: 16,
+    fontStyle: 'italic',
+  },
+  prayerTimesCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: 16,
+    marginVertical: 8,
+  },
+  prayerTimesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  prayerTimeItem: {
+    width: '48%',
+    backgroundColor: Colors.card,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+  },
+  prayerName: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginBottom: 4,
+  },
+  prayerTime: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.primary,
   },
   facilitiesCard: {
     backgroundColor: Colors.white,

@@ -1,10 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Calendar, Clock, MapPin } from 'lucide-react-native';
+import { Calendar, Clock, MapPin, Heart } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { Event } from '@/mocks/events';
 import { globalStyles } from '@/constants/theme';
+import useEvents from '@/hooks/useEvents';
 
 interface EventCardProps {
   event: Event;
@@ -13,9 +14,20 @@ interface EventCardProps {
 
 export default function EventCard({ event, compact = false }: EventCardProps) {
   const router = useRouter();
+  const { isEventSaved, saveEvent, unsaveEvent } = useEvents();
+  const isSaved = isEventSaved(event.id);
 
   const handlePress = () => {
     router.push(`/event/${event.id}`);
+  };
+
+  const handleSaveToggle = (e: any) => {
+    e.stopPropagation();
+    if (isSaved) {
+      unsaveEvent(event.id);
+    } else {
+      saveEvent(event.id);
+    }
   };
 
   const getCategoryColor = (category: string) => {
@@ -100,6 +112,17 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
               {event.category.charAt(0).toUpperCase() + event.category.slice(1)}
             </Text>
           </View>
+          
+          <TouchableOpacity 
+            style={styles.saveButton} 
+            onPress={handleSaveToggle}
+          >
+            <Heart 
+              size={20} 
+              color={isSaved ? Colors.error : Colors.textSecondary} 
+              fill={isSaved ? Colors.error : 'none'} 
+            />
+          </TouchableOpacity>
         </View>
       </View>
     </TouchableOpacity>
@@ -140,6 +163,8 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     marginTop: 12,
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   categoryTag: {
     paddingHorizontal: 12,
@@ -150,6 +175,9 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontSize: 12,
     fontWeight: '500',
+  },
+  saveButton: {
+    padding: 8,
   },
   compactCard: {
     backgroundColor: Colors.white,

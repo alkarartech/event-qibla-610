@@ -18,6 +18,7 @@ export interface Mosque {
   facilities?: string[];
   image?: string;
   rating?: number;
+  denomination?: 'Sunni' | 'Shia' | 'Other'; // Added denomination field
 }
 
 export const mosques: Mosque[] = [
@@ -40,6 +41,7 @@ export const mosques: Mosque[] = [
     facilities: ['Prayer Hall', 'Wudu Area', 'Library', 'Community Center'],
     image: 'https://images.unsplash.com/photo-1584551246679-0daf3d275d0f?q=80&w=1000',
     rating: 4.8,
+    denomination: 'Sunni',
   },
   {
     id: '2',
@@ -60,6 +62,7 @@ export const mosques: Mosque[] = [
     facilities: ['Prayer Hall', 'Wudu Area', 'Classroom', 'Parking'],
     image: 'https://images.unsplash.com/photo-1519817650390-64a93db51149?q=80&w=1000',
     rating: 4.6,
+    denomination: 'Sunni',
   },
   {
     id: '3',
@@ -80,6 +83,7 @@ export const mosques: Mosque[] = [
     facilities: ['Prayer Hall', 'Wudu Area', 'Bookstore', 'Children\'s Area'],
     image: 'https://images.unsplash.com/photo-1542324216541-c84c8ba6db04?q=80&w=1000',
     rating: 4.7,
+    denomination: 'Shia',
   },
   {
     id: '4',
@@ -100,6 +104,7 @@ export const mosques: Mosque[] = [
     facilities: ['Prayer Hall', 'Wudu Area', 'Conference Room'],
     image: 'https://images.unsplash.com/photo-1564769625688-8178d915b01b?q=80&w=1000',
     rating: 4.5,
+    denomination: 'Sunni',
   },
   {
     id: '5',
@@ -120,5 +125,6 @@ export const mosques: Mosque[] = [
     facilities: ['Prayer Hall', 'Wudu Area', 'Islamic School', 'Gymnasium'],
     image: 'https://images.unsplash.com/photo-1581274050302-581149d3b4c1?q=80&w=1000',
     rating: 4.9,
+    denomination: 'Shia',
   },
 ];

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, Image } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useRouter } from 'expo-router';
-import { MapPin, Calendar, Clock, User, Phone, Share2 } from 'lucide-react-native';
+import { MapPin, Calendar, Clock, User, Phone, Share2, Heart } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { globalStyles } from '@/constants/theme';
 import LoadingIndicator from '@/components/LoadingIndicator';
@@ -12,9 +12,10 @@ import useEvents from '@/hooks/useEvents';
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const { getEventById, loading } = useEvents();
+  const { getEventById, saveEvent, unsaveEvent, isEventSaved, loading } = useEvents();
 
   const event = getEventById(id as string);
+  const saved = event ? isEventSaved(event.id) : false;
 
   const handleMosquePress = () => {
     if (event) {
@@ -43,6 +44,16 @@ export default function EventDetailScreen() {
     if (event) {
       const message = `Check out this event: ${event.title} at ${event.mosque_name} on ${event.date} at ${event.time}`;
       Linking.openURL(`mailto:?subject=${event.title}&body=${message}`);
+    }
+  };
+
+  const handleSaveToggle = () => {
+    if (!event) return;
+    
+    if (saved) {
+      unsaveEvent(event.id);
+    } else {
+      saveEvent(event.id);
     }
   };
 
@@ -138,13 +149,30 @@ export default function EventDetailScreen() {
             <Text style={styles.actionButtonText}>Get Directions</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity 
-            style={[styles.actionButtonOutline, globalStyles.shadow]} 
-            onPress={handleSharePress}
-          >
-            <Share2 size={20} color={Colors.primary} style={styles.actionButtonIcon} />
-            <Text style={styles.actionButtonOutlineText}>Share</Text>
-          </TouchableOpacity>
+          <View style={styles.secondaryActions}>
+            <TouchableOpacity 
+              style={[styles.actionButtonOutline, globalStyles.shadow]} 
+              onPress={handleSaveToggle}
+            >
+              <Heart 
+                size={20} 
+                color={saved ? Colors.error : Colors.primary} 
+                fill={saved ? Colors.error : 'none'} 
+                style={styles.actionButtonIcon} 
+              />
+              <Text style={styles.actionButtonOutlineText}>
+                {saved ? 'Saved' : 'Save'}
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.actionButtonOutline, globalStyles.shadow]} 
+              onPress={handleSharePress}
+            >
+              <Share2 size={20} color={Colors.primary} style={styles.actionButtonIcon} />
+              <Text style={styles.actionButtonOutlineText}>Share</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </ScrollView>
@@ -227,7 +255,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  secondaryActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
   actionButtonOutline: {
+    flex: 1,
     backgroundColor: Colors.white,
     paddingVertical: 12,
     borderRadius: 8,

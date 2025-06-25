@@ -8,6 +8,7 @@ import MosqueCard from '@/components/MosqueCard';
 import EventCard from '@/components/EventCard';
 import LoadingIndicator from '@/components/LoadingIndicator';
 import EmptyState from '@/components/EmptyState';
+import LocationSelector from '@/components/LocationSelector';
 import useLocation from '@/hooks/useLocation';
 import useMosques from '@/hooks/useMosques';
 import useEvents from '@/hooks/useEvents';
@@ -24,11 +25,13 @@ export default function HomeScreen() {
     10
   );
   
-  const { nearbyEvents, loading: eventsLoading } = useEvents(
+  const { nearbyEvents, savedEvents, loading: eventsLoading } = useEvents(
     location?.coords.latitude,
     location?.coords.longitude,
     10
   );
+
+  const [customLocation, setCustomLocation] = useState('');
 
   const isLoading = locationLoading || mosquesLoading || eventsLoading;
 
@@ -40,14 +43,19 @@ export default function HomeScreen() {
     <EventCard event={item} compact />
   );
 
+  const handleLocationSelect = (location: string) => {
+    setCustomLocation(location);
+    // In a real app, this would trigger a location-based search
+  };
+
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Location Header */}
       <View style={styles.locationContainer}>
-        <MapPin size={20} color={Colors.primary} />
-        <Text style={styles.locationText}>
-          {locationLoading ? 'Getting your location...' : locationName}
-        </Text>
+        <LocationSelector 
+          currentLocation={customLocation || locationName || 'Current Location'}
+          onLocationSelect={handleLocationSelect}
+        />
       </View>
 
       {/* Welcome Section */}
@@ -60,6 +68,34 @@ export default function HomeScreen() {
         <LoadingIndicator message="Finding mosques and events near you..." />
       ) : (
         <>
+          {/* Saved Events Section */}
+          {savedEvents.length > 0 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Your Saved Events</Text>
+                <TouchableOpacity 
+                  style={styles.seeAllButton}
+                  onPress={() => {
+                    router.push('/events');
+                    // In a real app, we would set the filter to 'saved' on the events screen
+                  }}
+                >
+                  <Text style={styles.seeAllText}>See All</Text>
+                  <ChevronRight size={16} color={Colors.primary} />
+                </TouchableOpacity>
+              </View>
+
+              <FlatList
+                data={savedEvents.slice(0, 5)}
+                renderItem={renderEventItem}
+                keyExtractor={(item) => item.id}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.horizontalListContent}
+              />
+            </View>
+          )}
+
           {/* Nearby Mosques Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -150,16 +186,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   locationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 8,
-  },
-  locationText: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginLeft: 6,
   },
   welcomeSection: {
     paddingHorizontal: 16,
