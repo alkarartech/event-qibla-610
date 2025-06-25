@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Colors from '@/constants/colors';
 import { globalStyles } from '@/constants/theme';
+import useThemeStore from '@/hooks/useThemeStore';
 
 interface PrayerTimesProps {
   prayerTimes: {
@@ -15,6 +16,8 @@ interface PrayerTimesProps {
 }
 
 export default function PrayerTimesCard({ prayerTimes }: PrayerTimesProps) {
+  const { isDarkMode } = useThemeStore();
+  
   const prayers = [
     { name: 'Fajr', time: prayerTimes.fajr },
     { name: 'Dhuhr', time: prayerTimes.dhuhr },
@@ -25,12 +28,28 @@ export default function PrayerTimesCard({ prayerTimes }: PrayerTimesProps) {
   ];
 
   return (
-    <View style={[styles.card, globalStyles.shadow]}>
-      <Text style={styles.title}>Prayer Times</Text>
+    <View style={[
+      styles.card, 
+      globalStyles.shadow,
+      isDarkMode && styles.cardDark
+    ]}>
+      <Text style={[
+        styles.title,
+        isDarkMode && styles.titleDark
+      ]}>Prayer Times</Text>
       <View style={styles.timesContainer}>
         {prayers.map((prayer, index) => (
-          <View key={index} style={styles.prayerRow}>
-            <Text style={styles.prayerName}>{prayer.name}</Text>
+          <View 
+            key={index} 
+            style={[
+              styles.prayerRow,
+              isDarkMode && styles.prayerRowDark
+            ]}
+          >
+            <Text style={[
+              styles.prayerName,
+              isDarkMode && styles.prayerNameDark
+            ]}>{prayer.name}</Text>
             <Text style={styles.prayerTime}>{prayer.time}</Text>
           </View>
         ))}
@@ -47,11 +66,17 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginVertical: 8,
   },
+  cardDark: {
+    backgroundColor: '#1E1E1E',
+  },
   title: {
     fontSize: 18,
     fontWeight: '600',
     color: Colors.text,
     marginBottom: 16,
+  },
+  titleDark: {
+    color: Colors.white,
   },
   timesContainer: {
     borderRadius: 8,
@@ -65,10 +90,16 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
+  prayerRowDark: {
+    borderBottomColor: '#333333',
+  },
   prayerName: {
     fontSize: 16,
     color: Colors.text,
     fontWeight: '500',
+  },
+  prayerNameDark: {
+    color: Colors.white,
   },
   prayerTime: {
     fontSize: 16,

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, Image, Share, Platform } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { MapPin, Calendar, Clock, User, Phone, Share2, Heart } from 'lucide-react-native';
@@ -8,11 +8,13 @@ import { globalStyles } from '@/constants/theme';
 import LoadingIndicator from '@/components/LoadingIndicator';
 import EmptyState from '@/components/EmptyState';
 import useEvents from '@/hooks/useEvents';
+import useThemeStore from '@/hooks/useThemeStore';
 
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { getEventById, saveEvent, unsaveEvent, isEventSaved, loading } = useEvents();
+  const { isDarkMode, use24HourFormat } = useThemeStore();
 
   const event = getEventById(id as string);
   const saved = event ? isEventSaved(event.id) : false;
@@ -40,10 +42,22 @@ export default function EventDetailScreen() {
     }
   };
 
-  const handleSharePress = () => {
+  const handleSharePress = async () => {
     if (event) {
-      const message = `Check out this event: ${event.title} at ${event.mosque_name} on ${event.date} at ${event.time}`;
-      Linking.openURL(`mailto:?subject=${event.title}&body=${message}`);
+      try {
+        const appUrl = Platform.OS === 'ios' 
+          ? 'https://apps.apple.com/us/app/salah-journal/id6747736982'
+          : 'https://play.google.com/store/apps/details?id=com.kamalaldeen.mosquefinder';
+        
+        const message = `Check out this event: ${event.title} at ${event.mosque_name} on ${event.date} at ${event.time}\n\nDownload the Mosque Finder app to see more events: ${appUrl}`;
+        
+        await Share.share({
+          message,
+          title: event.title,
+        });
+      } catch (error) {
+        console.error('Error sharing event:', error);
+      }
     }
   };
 
@@ -85,8 +99,42 @@ export default function EventDetailScreen() {
     }
   };
 
+  // Format time based on user preference
+  const formatTime = (timeString: string) => {
+    if (use24HourFormat) {
+      // Convert to 24-hour format if it's in 12-hour format
+      if (timeString.includes('AM') || timeString.includes('PM')) {
+        const [timePart, period] = timeString.split(' ');
+        const [hours, minutes] = timePart.split(':').map(Number);
+        
+        let hour24 = hours;
+        if (period === 'PM' && hours < 12) hour24 += 12;
+        if (period === 'AM' && hours === 12) hour24 = 0;
+        
+        return `${hour24.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+      }
+      return timeString;
+    } else {
+      // Convert to 12-hour format if it's in 24-hour format
+      if (!timeString.includes('AM') && !timeString.includes('PM')) {
+        const [hours, minutes] = timeString.split(':').map(Number);
+        const period = hours >= 12 ? 'PM' : 'AM';
+        const hour12 = hours % 12 || 12;
+        
+        return `${hour12}:${minutes.toString().padStart(2, '0')} ${period}`;
+      }
+      return timeString;
+    }
+  };
+
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView 
+      style={[
+        styles.container,
+        isDarkMode && styles.containerDark
+      ]} 
+      showsVerticalScrollIndicator={false}
+    >
       {event.image && (
         <Image 
           source={{ uri: event.image }} 
@@ -97,7 +145,10 @@ export default function EventDetailScreen() {
 
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.title}>{event.title}</Text>
+          <Text style={[
+            styles.title,
+            isDarkMode && styles.titleDark
+          ]}>{event.title}</Text>
           <View style={[styles.categoryTag, { backgroundColor: getCategoryColor(event.category) }]}>
             <Text style={styles.categoryText}>
               {event.category.charAt(0).toUpperCase() + event.category.slice(1)}
@@ -108,37 +159,60 @@ export default function EventDetailScreen() {
         <View style={styles.detailsContainer}>
           <View style={styles.detailRow}>
             <Calendar size={20} color={Colors.primary} />
-            <Text style={styles.detailText}>{event.date}</Text>
+            <Text style={[
+              styles.detailText,
+              isDarkMode && styles.detailTextDark
+            ]}>{event.date}</Text>
           </View>
           
           <View style={styles.detailRow}>
             <Clock size={20} color={Colors.primary} />
-            <Text style={styles.detailText}>{event.time}</Text>
+            <Text style={[
+              styles.detailText,
+              isDarkMode && styles.detailTextDark
+            ]}>{formatTime(event.time)}</Text>
           </View>
           
           <TouchableOpacity style={styles.detailRow} onPress={handleMosquePress}>
             <MapPin size={20} color={Colors.primary} />
-            <Text style={[styles.detailText, styles.link]}>{event.mosque_name}</Text>
+            <Text style={[
+              styles.detailText,
+              styles.link,
+              isDarkMode && styles.linkDark
+            ]}>{event.mosque_name}</Text>
           </TouchableOpacity>
           
           {event.organizer && (
             <View style={styles.detailRow}>
               <User size={20} color={Colors.primary} />
-              <Text style={styles.detailText}>{event.organizer}</Text>
+              <Text style={[
+                styles.detailText,
+                isDarkMode && styles.detailTextDark
+              ]}>{event.organizer}</Text>
             </View>
           )}
           
           {event.contact && (
             <TouchableOpacity style={styles.detailRow} onPress={handleContactPress}>
               <Phone size={20} color={Colors.primary} />
-              <Text style={[styles.detailText, styles.link]}>{event.contact}</Text>
+              <Text style={[
+                styles.detailText,
+                styles.link,
+                isDarkMode && styles.linkDark
+              ]}>{event.contact}</Text>
             </TouchableOpacity>
           )}
         </View>
 
         <View style={styles.descriptionContainer}>
-          <Text style={styles.descriptionTitle}>About this event</Text>
-          <Text style={styles.description}>{event.description}</Text>
+          <Text style={[
+            styles.descriptionTitle,
+            isDarkMode && styles.descriptionTitleDark
+          ]}>About this event</Text>
+          <Text style={[
+            styles.description,
+            isDarkMode && styles.descriptionDark
+          ]}>{event.description}</Text>
         </View>
 
         <View style={styles.actionsContainer}>
@@ -184,6 +258,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
+  containerDark: {
+    backgroundColor: '#121212',
+  },
   image: {
     width: '100%',
     height: 200,
@@ -199,6 +276,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.text,
     marginBottom: 8,
+  },
+  titleDark: {
+    color: Colors.white,
   },
   categoryTag: {
     alignSelf: 'flex-start',
@@ -224,8 +304,14 @@ const styles = StyleSheet.create({
     color: Colors.text,
     marginLeft: 12,
   },
+  detailTextDark: {
+    color: Colors.white,
+  },
   link: {
     color: Colors.primary,
+  },
+  linkDark: {
+    color: Colors.primaryLight,
   },
   descriptionContainer: {
     marginBottom: 24,
@@ -236,10 +322,16 @@ const styles = StyleSheet.create({
     color: Colors.text,
     marginBottom: 8,
   },
+  descriptionTitleDark: {
+    color: Colors.white,
+  },
   description: {
     fontSize: 16,
     color: Colors.text,
     lineHeight: 24,
+  },
+  descriptionDark: {
+    color: Colors.white,
   },
   actionsContainer: {
     gap: 12,

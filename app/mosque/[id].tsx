@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, Image } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { MapPin, Phone, Globe, Clock, Calendar, ChevronRight } from 'lucide-react-native';
+import { MapPin, Phone, Globe, Clock, Calendar, ChevronRight, DollarSign } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { globalStyles } from '@/constants/theme';
 import PrayerTimesCard from '@/components/PrayerTimesCard';
@@ -11,11 +11,13 @@ import EmptyState from '@/components/EmptyState';
 import useMosques from '@/hooks/useMosques';
 import useEvents from '@/hooks/useEvents';
 import { getPrayerTimes } from '@/utils/prayerTimes';
+import useThemeStore from '@/hooks/useThemeStore';
 
 export default function MosqueDetailScreen() {
   const { id } = useLocalSearchParams();
   const { getMosqueById, loading: mosquesLoading } = useMosques();
   const { getEventsByMosqueId, loading: eventsLoading } = useEvents();
+  const { isDarkMode, use24HourFormat } = useThemeStore();
 
   const mosque = getMosqueById(id as string);
   const mosqueEvents = mosque ? getEventsByMosqueId(mosque.id) : [];
@@ -45,6 +47,16 @@ export default function MosqueDetailScreen() {
     }
   };
 
+  const handleDonatePress = () => {
+    if (mosque?.website) {
+      // In a real app, this would go to the mosque's donation page
+      Linking.openURL(`https://${mosque.website}/donate`);
+    } else {
+      // Generic donation page
+      Linking.openURL('https://kamal-aldeen.com/donate');
+    }
+  };
+
   if (isLoading) {
     return <LoadingIndicator fullScreen message="Loading mosque details..." />;
   }
@@ -58,8 +70,62 @@ export default function MosqueDetailScreen() {
     );
   }
 
+  // Format prayer times based on user preference
+  const formatPrayerTimes = (prayerTimes: any) => {
+    if (!prayerTimes) return prayerTimes;
+    
+    const formattedTimes = { ...prayerTimes };
+    
+    if (use24HourFormat) {
+      // Convert to 24-hour format
+      for (const prayer in formattedTimes) {
+        if (prayer === 'jummah') continue; // Skip jummah as it's handled separately
+        
+        const timeStr = formattedTimes[prayer];
+        if (timeStr.includes('AM') || timeStr.includes('PM')) {
+          const [timePart, period] = timeStr.split(' ');
+          const [hours, minutes] = timePart.split(':').map(Number);
+          
+          let hour24 = hours;
+          if (period === 'PM' && hours < 12) hour24 += 12;
+          if (period === 'AM' && hours === 12) hour24 = 0;
+          
+          formattedTimes[prayer] = `${hour24.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        }
+      }
+    } else {
+      // Convert to 12-hour format
+      for (const prayer in formattedTimes) {
+        if (prayer === 'jummah') continue; // Skip jummah as it's handled separately
+        
+        const timeStr = formattedTimes[prayer];
+        if (!timeStr.includes('AM') && !timeStr.includes('PM')) {
+          const [hours, minutes] = timeStr.split(':').map(Number);
+          const period = hours >= 12 ? 'PM' : 'AM';
+          const hour12 = hours % 12 || 12;
+          
+          formattedTimes[prayer] = `${hour12}:${minutes.toString().padStart(2, '0')} ${period}`;
+        }
+      }
+    }
+    
+    return formattedTimes;
+  };
+
+  const formattedCalculatedPrayerTimes = calculatedPrayerTimes ? 
+    formatPrayerTimes(calculatedPrayerTimes) : null;
+
+  const formattedStoredPrayerTimes = mosque.prayer_times ? 
+    formatPrayerTimes(mosque.prayer_times) : null;
+
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView 
+      style={[
+        styles.container,
+        isDarkMode && styles.containerDark
+      ]} 
+      showsVerticalScrollIndicator={false}
+    >
       {mosque.image && (
         <Image 
           source={{ uri: mosque.image }} 
@@ -69,7 +135,10 @@ export default function MosqueDetailScreen() {
       )}
 
       <View style={styles.content}>
-        <Text style={styles.name}>{mosque.name}</Text>
+        <Text style={[
+          styles.name,
+          isDarkMode && styles.nameDark
+        ]}>{mosque.name}</Text>
         
         {mosque.denomination && (
           <View style={styles.denominationTag}>
@@ -80,20 +149,31 @@ export default function MosqueDetailScreen() {
         <View style={styles.detailsContainer}>
           <View style={styles.detailRow}>
             <MapPin size={20} color={Colors.primary} />
-            <Text style={styles.detailText}>{mosque.address}</Text>
+            <Text style={[
+              styles.detailText,
+              isDarkMode && styles.detailTextDark
+            ]}>{mosque.address}</Text>
           </View>
           
           {mosque.phone && (
             <TouchableOpacity style={styles.detailRow} onPress={handlePhonePress}>
               <Phone size={20} color={Colors.primary} />
-              <Text style={[styles.detailText, styles.link]}>{mosque.phone}</Text>
+              <Text style={[
+                styles.detailText,
+                styles.link,
+                isDarkMode && styles.linkDark
+              ]}>{mosque.phone}</Text>
             </TouchableOpacity>
           )}
           
           {mosque.website && (
             <TouchableOpacity style={styles.detailRow} onPress={handleWebsitePress}>
               <Globe size={20} color={Colors.primary} />
-              <Text style={[styles.detailText, styles.link]}>{mosque.website}</Text>
+              <Text style={[
+                styles.detailText,
+                styles.link,
+                isDarkMode && styles.linkDark
+              ]}>{mosque.website}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -105,55 +185,122 @@ export default function MosqueDetailScreen() {
           >
             <Text style={styles.actionButtonText}>Get Directions</Text>
           </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.donateButton, globalStyles.shadow]} 
+            onPress={handleDonatePress}
+          >
+            <DollarSign size={20} color={Colors.white} style={styles.donateIcon} />
+            <Text style={styles.donateButtonText}>Donate</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Display calculated prayer times if available, otherwise use stored ones */}
-        {calculatedPrayerTimes ? (
-          <View style={[styles.prayerTimesCard, globalStyles.shadow]}>
-            <Text style={styles.cardTitle}>Prayer Times (Calculated)</Text>
-            <Text style={styles.calculationMethod}>
+        {formattedCalculatedPrayerTimes ? (
+          <View style={[
+            styles.prayerTimesCard, 
+            globalStyles.shadow,
+            isDarkMode && styles.prayerTimesCardDark
+          ]}>
+            <Text style={[
+              styles.cardTitle,
+              isDarkMode && styles.cardTitleDark
+            ]}>Prayer Times (Calculated)</Text>
+            <Text style={[
+              styles.calculationMethod,
+              isDarkMode && styles.calculationMethodDark
+            ]}>
               Using {mosque.denomination === 'Shia' ? 'Jafari' : 'MWL'} calculation method
             </Text>
             <View style={styles.prayerTimesGrid}>
-              <View style={styles.prayerTimeItem}>
-                <Text style={styles.prayerName}>Fajr</Text>
-                <Text style={styles.prayerTime}>{calculatedPrayerTimes.fajr}</Text>
+              <View style={[
+                styles.prayerTimeItem,
+                isDarkMode && styles.prayerTimeItemDark
+              ]}>
+                <Text style={[
+                  styles.prayerName,
+                  isDarkMode && styles.prayerNameDark
+                ]}>Fajr</Text>
+                <Text style={styles.prayerTime}>{formattedCalculatedPrayerTimes.fajr}</Text>
               </View>
-              <View style={styles.prayerTimeItem}>
-                <Text style={styles.prayerName}>Dhuhr</Text>
-                <Text style={styles.prayerTime}>{calculatedPrayerTimes.dhuhr}</Text>
+              <View style={[
+                styles.prayerTimeItem,
+                isDarkMode && styles.prayerTimeItemDark
+              ]}>
+                <Text style={[
+                  styles.prayerName,
+                  isDarkMode && styles.prayerNameDark
+                ]}>Dhuhr</Text>
+                <Text style={styles.prayerTime}>{formattedCalculatedPrayerTimes.dhuhr}</Text>
               </View>
-              <View style={styles.prayerTimeItem}>
-                <Text style={styles.prayerName}>Asr</Text>
-                <Text style={styles.prayerTime}>{calculatedPrayerTimes.asr}</Text>
+              <View style={[
+                styles.prayerTimeItem,
+                isDarkMode && styles.prayerTimeItemDark
+              ]}>
+                <Text style={[
+                  styles.prayerName,
+                  isDarkMode && styles.prayerNameDark
+                ]}>Asr</Text>
+                <Text style={styles.prayerTime}>{formattedCalculatedPrayerTimes.asr}</Text>
               </View>
-              <View style={styles.prayerTimeItem}>
-                <Text style={styles.prayerName}>Maghrib</Text>
-                <Text style={styles.prayerTime}>{calculatedPrayerTimes.maghrib}</Text>
+              <View style={[
+                styles.prayerTimeItem,
+                isDarkMode && styles.prayerTimeItemDark
+              ]}>
+                <Text style={[
+                  styles.prayerName,
+                  isDarkMode && styles.prayerNameDark
+                ]}>Maghrib</Text>
+                <Text style={styles.prayerTime}>{formattedCalculatedPrayerTimes.maghrib}</Text>
               </View>
-              <View style={styles.prayerTimeItem}>
-                <Text style={styles.prayerName}>Isha</Text>
-                <Text style={styles.prayerTime}>{calculatedPrayerTimes.isha}</Text>
+              <View style={[
+                styles.prayerTimeItem,
+                isDarkMode && styles.prayerTimeItemDark
+              ]}>
+                <Text style={[
+                  styles.prayerName,
+                  isDarkMode && styles.prayerNameDark
+                ]}>Isha</Text>
+                <Text style={styles.prayerTime}>{formattedCalculatedPrayerTimes.isha}</Text>
               </View>
               {mosque.prayer_times?.jummah && (
-                <View style={styles.prayerTimeItem}>
-                  <Text style={styles.prayerName}>Jummah</Text>
+                <View style={[
+                  styles.prayerTimeItem,
+                  isDarkMode && styles.prayerTimeItemDark
+                ]}>
+                  <Text style={[
+                    styles.prayerName,
+                    isDarkMode && styles.prayerNameDark
+                  ]}>Jummah</Text>
                   <Text style={styles.prayerTime}>{mosque.prayer_times.jummah}</Text>
                 </View>
               )}
             </View>
           </View>
-        ) : mosque.prayer_times && (
-          <PrayerTimesCard prayerTimes={mosque.prayer_times} />
+        ) : formattedStoredPrayerTimes && (
+          <PrayerTimesCard prayerTimes={formattedStoredPrayerTimes} />
         )}
 
         {mosque.facilities && mosque.facilities.length > 0 && (
-          <View style={[styles.facilitiesCard, globalStyles.shadow]}>
-            <Text style={styles.cardTitle}>Facilities</Text>
+          <View style={[
+            styles.facilitiesCard, 
+            globalStyles.shadow,
+            isDarkMode && styles.facilitiesCardDark
+          ]}>
+            <Text style={[
+              styles.cardTitle,
+              isDarkMode && styles.cardTitleDark
+            ]}>Facilities</Text>
             <View style={styles.facilitiesContainer}>
               {mosque.facilities.map((facility, index) => (
-                <View key={index} style={styles.facilityItem}>
-                  <Text style={styles.facilityText}>{facility}</Text>
+                <View key={index} style={[
+                  styles.facilityItem,
+                  isDarkMode && styles.facilityItemDark
+                ]}>
+                  <Text style={[
+                    styles.facilityText,
+                    isDarkMode && styles.facilityTextDark
+                  ]}>{facility}</Text>
                 </View>
               ))}
             </View>
@@ -163,7 +310,10 @@ export default function MosqueDetailScreen() {
         {mosqueEvents.length > 0 && (
           <View style={styles.eventsSection}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Upcoming Events</Text>
+              <Text style={[
+                styles.sectionTitle,
+                isDarkMode && styles.sectionTitleDark
+              ]}>Upcoming Events</Text>
             </View>
             
             {mosqueEvents.map(event => (
@@ -181,6 +331,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
+  containerDark: {
+    backgroundColor: '#121212',
+  },
   image: {
     width: '100%',
     height: 200,
@@ -193,6 +346,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.text,
     marginBottom: 8,
+  },
+  nameDark: {
+    color: Colors.white,
   },
   denominationTag: {
     alignSelf: 'flex-start',
@@ -221,13 +377,22 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     flex: 1,
   },
+  detailTextDark: {
+    color: Colors.white,
+  },
   link: {
     color: Colors.primary,
   },
+  linkDark: {
+    color: Colors.primaryLight,
+  },
   actionsContainer: {
+    flexDirection: 'row',
     marginBottom: 24,
+    gap: 12,
   },
   actionButton: {
+    flex: 1,
     backgroundColor: Colors.primary,
     paddingVertical: 12,
     borderRadius: 8,
@@ -238,11 +403,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  donateButton: {
+    flex: 1,
+    backgroundColor: '#F44336',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  donateButtonText: {
+    color: Colors.white,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  donateIcon: {
+    marginRight: 8,
+  },
   cardTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: Colors.text,
     marginBottom: 8,
+  },
+  cardTitleDark: {
+    color: Colors.white,
   },
   calculationMethod: {
     fontSize: 14,
@@ -250,11 +435,17 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     fontStyle: 'italic',
   },
+  calculationMethodDark: {
+    color: '#AAAAAA',
+  },
   prayerTimesCard: {
     backgroundColor: Colors.white,
     borderRadius: 12,
     padding: 16,
     marginVertical: 8,
+  },
+  prayerTimesCardDark: {
+    backgroundColor: '#1E1E1E',
   },
   prayerTimesGrid: {
     flexDirection: 'row',
@@ -268,10 +459,16 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 12,
   },
+  prayerTimeItemDark: {
+    backgroundColor: '#2a2a2a',
+  },
   prayerName: {
     fontSize: 14,
     color: Colors.textSecondary,
     marginBottom: 4,
+  },
+  prayerNameDark: {
+    color: '#AAAAAA',
   },
   prayerTime: {
     fontSize: 16,
@@ -283,6 +480,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginVertical: 8,
+  },
+  facilitiesCardDark: {
+    backgroundColor: '#1E1E1E',
   },
   facilitiesContainer: {
     flexDirection: 'row',
@@ -296,9 +496,15 @@ const styles = StyleSheet.create({
     marginRight: 8,
     marginBottom: 8,
   },
+  facilityItemDark: {
+    backgroundColor: '#2a2a2a',
+  },
   facilityText: {
     fontSize: 14,
     color: Colors.text,
+  },
+  facilityTextDark: {
+    color: Colors.white,
   },
   eventsSection: {
     marginTop: 8,
@@ -310,5 +516,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: Colors.text,
+  },
+  sectionTitleDark: {
+    color: Colors.white,
   },
 });

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
-import { MapPin, Calendar, ChevronRight } from 'lucide-react-native';
+import { MapPin, Calendar, ChevronRight, X } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { globalStyles } from '@/constants/theme';
 import MosqueCard from '@/components/MosqueCard';
@@ -14,10 +14,13 @@ import useMosques from '@/hooks/useMosques';
 import useEvents from '@/hooks/useEvents';
 import { Mosque } from '@/mocks/mosques';
 import { Event } from '@/mocks/events';
+import useThemeStore from '@/hooks/useThemeStore';
+import CalendarView from '@/components/CalendarView';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { location, locationName, loading: locationLoading } = useLocation();
+  const { isDarkMode } = useThemeStore();
   
   const { nearbyMosques, loading: mosquesLoading } = useMosques(
     location?.coords.latitude,
@@ -25,15 +28,36 @@ export default function HomeScreen() {
     10
   );
   
-  const { nearbyEvents, savedEvents, loading: eventsLoading } = useEvents(
+  const { nearbyEvents, savedEvents, loading: eventsLoading, refreshSavedEvents } = useEvents(
     location?.coords.latitude,
     location?.coords.longitude,
     10
   );
 
   const [customLocation, setCustomLocation] = useState('');
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
 
   const isLoading = locationLoading || mosquesLoading || eventsLoading;
+
+  // Refresh saved events when component mounts or becomes active
+  useEffect(() => {
+    refreshSavedEvents();
+    
+    // Get upcoming events (sorted by date)
+    const today = new Date();
+    const upcoming = [...nearbyEvents, ...savedEvents]
+      .filter((event, index, self) => 
+        // Remove duplicates
+        index === self.findIndex(e => e.id === event.id) &&
+        // Only future events
+        new Date(event.date) >= today
+      )
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .slice(0, 5);
+    
+    setUpcomingEvents(upcoming);
+  }, [nearbyEvents, savedEvents]);
 
   const renderMosqueItem = ({ item }: { item: Mosque }) => (
     <MosqueCard mosque={item} compact />
@@ -49,19 +73,38 @@ export default function HomeScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView 
+      style={[
+        styles.container,
+        isDarkMode && styles.containerDark
+      ]} 
+      showsVerticalScrollIndicator={false}
+    >
       {/* Location Header */}
       <View style={styles.locationContainer}>
         <LocationSelector 
           currentLocation={customLocation || locationName || 'Current Location'}
           onLocationSelect={handleLocationSelect}
         />
+        
+        <TouchableOpacity 
+          style={styles.calendarButton}
+          onPress={() => setShowCalendar(true)}
+        >
+          <Calendar size={24} color={isDarkMode ? Colors.white : Colors.primary} />
+        </TouchableOpacity>
       </View>
 
       {/* Welcome Section */}
       <View style={styles.welcomeSection}>
-        <Text style={styles.welcomeTitle}>Assalamu Alaikum</Text>
-        <Text style={styles.welcomeSubtitle}>Find mosques and events near you</Text>
+        <Text style={[
+          styles.welcomeTitle,
+          isDarkMode && styles.welcomeTitleDark
+        ]}>Assalamu Alaikum</Text>
+        <Text style={[
+          styles.welcomeSubtitle,
+          isDarkMode && styles.welcomeSubtitleDark
+        ]}>Find mosques and events near you</Text>
       </View>
 
       {isLoading ? (
@@ -72,7 +115,10 @@ export default function HomeScreen() {
           {savedEvents.length > 0 && (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Your Saved Events</Text>
+                <Text style={[
+                  styles.sectionTitle,
+                  isDarkMode && styles.sectionTitleDark
+                ]}>Your Saved Events</Text>
                 <TouchableOpacity 
                   style={styles.seeAllButton}
                   onPress={() => {
@@ -99,7 +145,10 @@ export default function HomeScreen() {
           {/* Nearby Mosques Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Nearby Mosques</Text>
+              <Text style={[
+                styles.sectionTitle,
+                isDarkMode && styles.sectionTitleDark
+              ]}>Nearby Mosques</Text>
               <TouchableOpacity 
                 style={styles.seeAllButton}
                 onPress={() => router.push('/mosques')}
@@ -129,7 +178,10 @@ export default function HomeScreen() {
           {/* Upcoming Events Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Upcoming Events</Text>
+              <Text style={[
+                styles.sectionTitle,
+                isDarkMode && styles.sectionTitleDark
+              ]}>Upcoming Events</Text>
               <TouchableOpacity 
                 style={styles.seeAllButton}
                 onPress={() => router.push('/events')}
@@ -139,19 +191,53 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </View>
 
-            {nearbyEvents.length > 0 ? (
-              <FlatList
-                data={nearbyEvents.slice(0, 5)}
-                renderItem={renderEventItem}
-                keyExtractor={(item) => item.id}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.horizontalListContent}
-              />
+            {upcomingEvents.length > 0 ? (
+              <View>
+                {upcomingEvents.map(event => (
+                  <TouchableOpacity 
+                    key={event.id}
+                    style={[
+                      styles.upcomingEventItem,
+                      isDarkMode && styles.upcomingEventItemDark
+                    ]}
+                    onPress={() => router.push(`/event/${event.id}`)}
+                  >
+                    <View style={styles.upcomingEventDate}>
+                      <Text style={styles.upcomingEventDay}>
+                        {new Date(event.date).getDate()}
+                      </Text>
+                      <Text style={styles.upcomingEventMonth}>
+                        {new Date(event.date).toLocaleString('default', { month: 'short' })}
+                      </Text>
+                    </View>
+                    <View style={styles.upcomingEventDetails}>
+                      <Text 
+                        style={[
+                          styles.upcomingEventTitle,
+                          isDarkMode && styles.upcomingEventTitleDark
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {event.title}
+                      </Text>
+                      <Text 
+                        style={[
+                          styles.upcomingEventLocation,
+                          isDarkMode && styles.upcomingEventLocationDark
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {event.time} • {event.mosque_name}
+                      </Text>
+                    </View>
+                    <ChevronRight size={20} color={isDarkMode ? Colors.white : Colors.textSecondary} />
+                  </TouchableOpacity>
+                ))}
+              </View>
             ) : (
               <EmptyState
                 title="No Events Found"
-                message="We couldn't find any events near your current location."
+                message="We couldn't find any upcoming events."
               />
             )}
           </View>
@@ -159,11 +245,21 @@ export default function HomeScreen() {
       )}
 
       {/* Prayer Times Reminder */}
-      <View style={[styles.prayerTimesCard, globalStyles.shadow]}>
+      <View style={[
+        styles.prayerTimesCard, 
+        globalStyles.shadow,
+        isDarkMode && styles.prayerTimesCardDark
+      ]}>
         <Calendar size={24} color={Colors.primary} />
         <View style={styles.prayerTimesContent}>
-          <Text style={styles.prayerTimesTitle}>Prayer Times</Text>
-          <Text style={styles.prayerTimesSubtitle}>
+          <Text style={[
+            styles.prayerTimesTitle,
+            isDarkMode && styles.prayerTimesTitleDark
+          ]}>Prayer Times</Text>
+          <Text style={[
+            styles.prayerTimesSubtitle,
+            isDarkMode && styles.prayerTimesSubtitleDark
+          ]}>
             Check prayer times at your nearest mosque
           </Text>
         </View>
@@ -176,6 +272,39 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.footer} />
+
+      {/* Calendar Modal */}
+      <Modal
+        visible={showCalendar}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowCalendar(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[
+            styles.calendarModalContent,
+            isDarkMode && styles.calendarModalContentDark
+          ]}>
+            <View style={styles.calendarModalHeader}>
+              <Text style={[
+                styles.calendarModalTitle,
+                isDarkMode && styles.calendarModalTitleDark
+              ]}>Your Events Calendar</Text>
+              <TouchableOpacity onPress={() => setShowCalendar(false)}>
+                <X size={24} color={isDarkMode ? Colors.white : Colors.text} />
+              </TouchableOpacity>
+            </View>
+            
+            <CalendarView 
+              events={savedEvents} 
+              onEventPress={(eventId) => {
+                setShowCalendar(false);
+                router.push(`/event/${eventId}`);
+              }}
+            />
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -185,9 +314,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
+  containerDark: {
+    backgroundColor: '#121212',
+  },
   locationContainer: {
     paddingHorizontal: 16,
     paddingTop: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  calendarButton: {
+    padding: 8,
   },
   welcomeSection: {
     paddingHorizontal: 16,
@@ -200,9 +338,15 @@ const styles = StyleSheet.create({
     color: Colors.text,
     marginBottom: 4,
   },
+  welcomeTitleDark: {
+    color: Colors.white,
+  },
   welcomeSubtitle: {
     fontSize: 16,
     color: Colors.textSecondary,
+  },
+  welcomeSubtitleDark: {
+    color: '#AAAAAA',
   },
   section: {
     marginBottom: 24,
@@ -219,6 +363,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.text,
   },
+  sectionTitleDark: {
+    color: Colors.white,
+  },
   seeAllButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -232,6 +379,55 @@ const styles = StyleSheet.create({
     paddingLeft: 16,
     paddingRight: 8,
   },
+  upcomingEventItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: 12,
+    marginHorizontal: 16,
+    marginBottom: 8,
+  },
+  upcomingEventItemDark: {
+    backgroundColor: '#1E1E1E',
+  },
+  upcomingEventDate: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    backgroundColor: Colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  upcomingEventDay: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.white,
+  },
+  upcomingEventMonth: {
+    fontSize: 12,
+    color: Colors.white,
+  },
+  upcomingEventDetails: {
+    flex: 1,
+  },
+  upcomingEventTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: 4,
+  },
+  upcomingEventTitleDark: {
+    color: Colors.white,
+  },
+  upcomingEventLocation: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+  },
+  upcomingEventLocationDark: {
+    color: '#AAAAAA',
+  },
   prayerTimesCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -240,6 +436,9 @@ const styles = StyleSheet.create({
     padding: 16,
     marginHorizontal: 16,
     marginBottom: 24,
+  },
+  prayerTimesCardDark: {
+    backgroundColor: '#1E1E1E',
   },
   prayerTimesContent: {
     flex: 1,
@@ -251,9 +450,15 @@ const styles = StyleSheet.create({
     color: Colors.text,
     marginBottom: 2,
   },
+  prayerTimesTitleDark: {
+    color: Colors.white,
+  },
   prayerTimesSubtitle: {
     fontSize: 14,
     color: Colors.textSecondary,
+  },
+  prayerTimesSubtitleDark: {
+    color: '#AAAAAA',
   },
   prayerTimesButton: {
     backgroundColor: Colors.primaryLight,
@@ -267,5 +472,34 @@ const styles = StyleSheet.create({
   },
   footer: {
     height: 24,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+  },
+  calendarModalContent: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    margin: 20,
+    padding: 20,
+    maxHeight: '80%',
+  },
+  calendarModalContentDark: {
+    backgroundColor: '#1E1E1E',
+  },
+  calendarModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  calendarModalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  calendarModalTitleDark: {
+    color: Colors.white,
   },
 });

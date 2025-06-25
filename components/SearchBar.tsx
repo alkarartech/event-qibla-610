@@ -2,6 +2,7 @@ import React from 'react';
 import { View, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
 import { Search, X } from 'lucide-react-native';
 import Colors from '@/constants/colors';
+import useThemeStore from '@/hooks/useThemeStore';
 
 interface SearchBarProps {
   value: string;
@@ -16,20 +17,28 @@ export default function SearchBar({
   placeholder = 'Search', 
   onClear 
 }: SearchBarProps) {
+  const { isDarkMode } = useThemeStore();
+  
   return (
     <View style={styles.container}>
-      <View style={styles.searchContainer}>
-        <Search size={20} color={Colors.textSecondary} style={styles.icon} />
+      <View style={[
+        styles.searchContainer,
+        isDarkMode && styles.searchContainerDark
+      ]}>
+        <Search size={20} color={isDarkMode ? Colors.white : Colors.textSecondary} style={styles.icon} />
         <TextInput
-          style={styles.input}
+          style={[
+            styles.input,
+            isDarkMode && styles.inputDark
+          ]}
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor={Colors.textSecondary}
+          placeholderTextColor={isDarkMode ? '#AAAAAA' : Colors.textSecondary}
         />
         {value.length > 0 && onClear && (
           <TouchableOpacity onPress={onClear} style={styles.clearButton}>
-            <X size={18} color={Colors.textSecondary} />
+            <X size={18} color={isDarkMode ? Colors.white : Colors.textSecondary} />
           </TouchableOpacity>
         )}
       </View>
@@ -50,6 +59,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 44,
   },
+  searchContainerDark: {
+    backgroundColor: '#2a2a2a',
+  },
   icon: {
     marginRight: 8,
   },
@@ -58,6 +70,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.text,
     height: '100%',
+  },
+  inputDark: {
+    color: Colors.white,
   },
   clearButton: {
     padding: 4,

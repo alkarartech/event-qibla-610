@@ -1,0 +1,51 @@
+import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Colors from '@/constants/colors';
+
+interface ThemeState {
+  isDarkMode: boolean;
+  toggleDarkMode: () => void;
+  use24HourFormat: boolean;
+  toggleTimeFormat: () => void;
+  getColors: () => typeof Colors;
+}
+
+const useThemeStore = create<ThemeState>()(
+  persist(
+    (set, get) => ({
+      isDarkMode: false,
+      use24HourFormat: false,
+      toggleDarkMode: () => set((state) => ({ isDarkMode: !state.isDarkMode })),
+      toggleTimeFormat: () => set((state) => ({ use24HourFormat: !state.use24HourFormat })),
+      getColors: () => {
+        const { isDarkMode } = get();
+        if (isDarkMode) {
+          return {
+            primary: '#4CAF50',
+            primaryLight: '#2C5F2E',
+            secondary: '#1976D2',
+            secondaryLight: '#0D3B69',
+            background: '#121212',
+            card: '#1E1E1E',
+            text: '#FFFFFF',
+            textSecondary: '#AAAAAA',
+            border: '#333333',
+            success: '#4CAF50',
+            error: '#F44336',
+            white: '#FFFFFF',
+            black: '#000000',
+            transparent: 'transparent',
+          };
+        }
+        return Colors;
+      }
+    }),
+    {
+      name: 'theme-storage',
+      storage: createJSONStorage(() => AsyncStorage),
+    }
+  )
+);
+
+export default useThemeStore;

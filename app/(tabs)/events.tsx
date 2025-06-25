@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, Platform } from 'react-native';
 import { MapPin, Filter, Calendar, ChevronRight } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { globalStyles } from '@/constants/theme';
@@ -11,6 +11,7 @@ import EmptyState from '@/components/EmptyState';
 import LocationSelector from '@/components/LocationSelector';
 import useLocation from '@/hooks/useLocation';
 import useEvents from '@/hooks/useEvents';
+import useThemeStore from '@/hooks/useThemeStore';
 
 // Time filter options
 const timeFilterOptions = [
@@ -29,6 +30,7 @@ export default function EventsScreen() {
     location?.coords.longitude,
     10
   );
+  const { isDarkMode } = useThemeStore();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredEvents, setFilteredEvents] = useState(allEvents);
@@ -139,7 +141,10 @@ export default function EventsScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[
+      styles.container, 
+      isDarkMode && styles.containerDark
+    ]}>
       {/* Location Selector */}
       <View style={styles.locationContainer}>
         <LocationSelector 
@@ -159,31 +164,58 @@ export default function EventsScreen() {
         
         <View style={styles.filterButtonsContainer}>
           <TouchableOpacity 
-            style={styles.filterButton}
-            onPress={() => setShowFilterModal(true)}
+            style={[
+              styles.filterButton,
+              isDarkMode && styles.filterButtonDark
+            ]}
+            onPress={() => setSelectedFilter('nearby')}
           >
-            <Filter size={18} color={Colors.text} />
-            <Text style={styles.filterButtonText}>Filter</Text>
+            <MapPin size={18} color={isDarkMode ? Colors.white : Colors.text} />
+            <Text style={[
+              styles.filterButtonText,
+              isDarkMode && styles.filterButtonTextDark,
+              selectedFilter === 'nearby' && styles.activeFilterText
+            ]}>Nearby</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
-            style={styles.filterButton}
+            style={[
+              styles.filterButton,
+              isDarkMode && styles.filterButtonDark
+            ]}
+            onPress={() => setSelectedFilter('all')}
+          >
+            <Filter size={18} color={isDarkMode ? Colors.white : Colors.text} />
+            <Text style={[
+              styles.filterButtonText,
+              isDarkMode && styles.filterButtonTextDark,
+              selectedFilter === 'all' && styles.activeFilterText
+            ]}>All Events</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[
+              styles.filterButton,
+              isDarkMode && styles.filterButtonDark
+            ]}
             onPress={() => setShowTimeFilterModal(true)}
           >
-            <Calendar size={18} color={Colors.text} />
-            <Text style={styles.filterButtonText}>{getSelectedTimeFilterLabel()}</Text>
+            <Calendar size={18} color={isDarkMode ? Colors.white : Colors.text} />
+            <Text style={[
+              styles.filterButtonText,
+              isDarkMode && styles.filterButtonTextDark
+            ]}>{getSelectedTimeFilterLabel()}</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Category Filters */}
       <FlatList
-        data={['nearby', 'saved', ...categories]}
+        data={['saved', ...categories]}
         renderItem={({ item }) => (
           <FilterChip
             label={
               item === 'all' ? 'All Events' : 
-              item === 'nearby' ? 'Nearby' : 
               item === 'saved' ? 'Saved' :
               item.charAt(0).toUpperCase() + item.slice(1)
             }
@@ -228,9 +260,15 @@ export default function EventsScreen() {
         onRequestClose={() => setShowTimeFilterModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[
+            styles.modalContent,
+            isDarkMode && styles.modalContentDark
+          ]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Time</Text>
+              <Text style={[
+                styles.modalTitle,
+                isDarkMode && styles.modalTitleDark
+              ]}>Select Time</Text>
               <TouchableOpacity onPress={() => setShowTimeFilterModal(false)}>
                 <Text style={styles.modalCloseButton}>Close</Text>
               </TouchableOpacity>
@@ -245,111 +283,6 @@ export default function EventsScreen() {
           </View>
         </View>
       </Modal>
-
-      {/* Filter Modal */}
-      <Modal
-        visible={showFilterModal}
-        animationType="slide"
-        onRequestClose={() => setShowFilterModal(false)}
-      >
-        <View style={styles.filterModalContainer}>
-          <View style={styles.filterModalHeader}>
-            <TouchableOpacity onPress={() => setShowFilterModal(false)}>
-              <Text style={styles.filterModalCancel}>Cancel</Text>
-            </TouchableOpacity>
-            <Text style={styles.filterModalTitle}>Filters</Text>
-            <TouchableOpacity onPress={() => {
-              // Reset filters
-              setFilterSettings({
-                categories: [],
-                languages: [],
-                sortBy: 'relevance',
-              });
-              setShowFilterModal(false);
-            }}>
-              <Text style={styles.filterModalReset}>Reset</Text>
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.filterSection}>
-            <Text style={styles.filterSectionTitle}>Categories</Text>
-            <View style={styles.filterChipsContainer}>
-              {categories.filter(cat => cat !== 'all').map(category => (
-                <FilterChip
-                  key={category}
-                  label={category.charAt(0).toUpperCase() + category.slice(1)}
-                  selected={filterSettings.categories.includes(category)}
-                  onPress={() => {
-                    setFilterSettings(prev => {
-                      const newCategories = prev.categories.includes(category)
-                        ? prev.categories.filter(c => c !== category)
-                        : [...prev.categories, category];
-                      return { ...prev, categories: newCategories };
-                    });
-                  }}
-                />
-              ))}
-            </View>
-          </View>
-          
-          <View style={styles.filterSection}>
-            <Text style={styles.filterSectionTitle}>Languages</Text>
-            <View style={styles.filterChipsContainer}>
-              {['English', 'Arabic', 'Urdu', 'French', 'Spanish'].map(language => (
-                <FilterChip
-                  key={language}
-                  label={language}
-                  selected={filterSettings.languages.includes(language)}
-                  onPress={() => {
-                    setFilterSettings(prev => {
-                      const newLanguages = prev.languages.includes(language)
-                        ? prev.languages.filter(l => l !== language)
-                        : [...prev.languages, language];
-                      return { ...prev, languages: newLanguages };
-                    });
-                  }}
-                />
-              ))}
-            </View>
-          </View>
-          
-          <View style={styles.filterSection}>
-            <Text style={styles.filterSectionTitle}>Sort By</Text>
-            <TouchableOpacity 
-              style={styles.sortOption}
-              onPress={() => setFilterSettings(prev => ({ ...prev, sortBy: 'relevance' }))}
-            >
-              <Text style={styles.sortOptionText}>Relevance</Text>
-              <View style={[
-                styles.radioButton, 
-                filterSettings.sortBy === 'relevance' && styles.radioButtonSelected
-              ]}>
-                {filterSettings.sortBy === 'relevance' && <View style={styles.radioButtonInner} />}
-              </View>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.sortOption}
-              onPress={() => setFilterSettings(prev => ({ ...prev, sortBy: 'distance' }))}
-            >
-              <Text style={styles.sortOptionText}>Distance</Text>
-              <View style={[
-                styles.radioButton, 
-                filterSettings.sortBy === 'distance' && styles.radioButtonSelected
-              ]}>
-                {filterSettings.sortBy === 'distance' && <View style={styles.radioButtonInner} />}
-              </View>
-            </TouchableOpacity>
-          </View>
-          
-          <TouchableOpacity 
-            style={styles.applyButton}
-            onPress={() => setShowFilterModal(false)}
-          >
-            <Text style={styles.applyButtonText}>Apply Filters</Text>
-          </TouchableOpacity>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -358,6 +291,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  containerDark: {
+    backgroundColor: '#121212',
   },
   locationContainer: {
     paddingHorizontal: 16,
@@ -380,10 +316,20 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
   },
+  filterButtonDark: {
+    backgroundColor: '#2a2a2a',
+  },
   filterButtonText: {
     fontSize: 14,
     color: Colors.text,
     marginLeft: 6,
+  },
+  filterButtonTextDark: {
+    color: Colors.white,
+  },
+  activeFilterText: {
+    color: Colors.primary,
+    fontWeight: '600',
   },
   filtersContainer: {
     paddingHorizontal: 16,
@@ -402,6 +348,10 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingBottom: 30,
+    height: 400, // Fixed height
+  },
+  modalContentDark: {
+    backgroundColor: '#1e1e1e',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -415,6 +365,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: Colors.text,
+  },
+  modalTitleDark: {
+    color: Colors.white,
   },
   modalCloseButton: {
     fontSize: 16,
@@ -447,85 +400,5 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     backgroundColor: Colors.primary,
-  },
-  filterModalContainer: {
-    flex: 1,
-    backgroundColor: Colors.white,
-  },
-  filterModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  filterModalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.text,
-  },
-  filterModalCancel: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-  },
-  filterModalReset: {
-    fontSize: 16,
-    color: Colors.primary,
-  },
-  filterSection: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  filterSectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.text,
-    marginBottom: 12,
-  },
-  filterChipsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  sortOption: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  sortOptionText: {
-    fontSize: 16,
-    color: Colors.text,
-  },
-  radioButton: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  radioButtonSelected: {
-    borderColor: Colors.primary,
-  },
-  radioButtonInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: Colors.primary,
-  },
-  applyButton: {
-    backgroundColor: Colors.primary,
-    margin: 16,
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  applyButtonText: {
-    color: Colors.white,
-    fontSize: 16,
-    fontWeight: '600',
   },
 });
