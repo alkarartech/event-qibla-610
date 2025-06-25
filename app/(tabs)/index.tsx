@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList } from 'react-native';
 import { useRouter } from 'expo-router';
-import { MapPin, Calendar, ChevronRight, X } from 'lucide-react-native';
+import { MapPin, Calendar, ChevronRight } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { globalStyles } from '@/constants/theme';
 import MosqueCard from '@/components/MosqueCard';
@@ -15,7 +15,6 @@ import useEvents from '@/hooks/useEvents';
 import { Mosque } from '@/mocks/mosques';
 import { Event } from '@/mocks/events';
 import useThemeStore from '@/hooks/useThemeStore';
-import CalendarView from '@/components/CalendarView';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -35,7 +34,6 @@ export default function HomeScreen() {
   );
 
   const [customLocation, setCustomLocation] = useState('');
-  const [showCalendar, setShowCalendar] = useState(false);
   const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
 
   const isLoading = locationLoading || mosquesLoading || eventsLoading;
@@ -73,7 +71,7 @@ export default function HomeScreen() {
   };
 
   const handleCalendarPress = () => {
-    // Navigate to the full calendar screen instead of showing a modal
+    // Navigate to the full calendar screen
     router.push('/calendar');
   };
 
@@ -116,71 +114,7 @@ export default function HomeScreen() {
         <LoadingIndicator message="Finding mosques and events near you..." />
       ) : (
         <>
-          {/* Saved Events Section */}
-          {savedEvents.length > 0 && (
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={[
-                  styles.sectionTitle,
-                  isDarkMode && styles.sectionTitleDark
-                ]}>Your Saved Events</Text>
-                <TouchableOpacity 
-                  style={styles.seeAllButton}
-                  onPress={() => {
-                    router.push('/events');
-                    // In a real app, we would set the filter to 'saved' on the events screen
-                  }}
-                >
-                  <Text style={styles.seeAllText}>See All</Text>
-                  <ChevronRight size={16} color={Colors.primary} />
-                </TouchableOpacity>
-              </View>
-
-              <FlatList
-                data={savedEvents.slice(0, 5)}
-                renderItem={renderEventItem}
-                keyExtractor={(item) => item.id}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.horizontalListContent}
-              />
-            </View>
-          )}
-
-          {/* Nearby Mosques Section */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={[
-                styles.sectionTitle,
-                isDarkMode && styles.sectionTitleDark
-              ]}>Nearby Mosques</Text>
-              <TouchableOpacity 
-                style={styles.seeAllButton}
-                onPress={() => router.push('/mosques')}
-              >
-                <Text style={styles.seeAllText}>See All</Text>
-                <ChevronRight size={16} color={Colors.primary} />
-              </TouchableOpacity>
-            </View>
-
-            {nearbyMosques.length > 0 ? (
-              <FlatList
-                data={nearbyMosques.slice(0, 5)}
-                renderItem={renderMosqueItem}
-                keyExtractor={(item) => item.id}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.horizontalListContent}
-              />
-            ) : (
-              <EmptyState
-                title="No Mosques Found"
-                message="We couldn't find any mosques near your current location."
-              />
-            )}
-          </View>
-
-          {/* Upcoming Events Section */}
+          {/* Upcoming Events Section - Moved to top */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={[
@@ -243,6 +177,70 @@ export default function HomeScreen() {
               <EmptyState
                 title="No Events Found"
                 message="We couldn't find any upcoming events."
+              />
+            )}
+          </View>
+
+          {/* Saved Events Section */}
+          {savedEvents.length > 0 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={[
+                  styles.sectionTitle,
+                  isDarkMode && styles.sectionTitleDark
+                ]}>Your Saved Events</Text>
+                <TouchableOpacity 
+                  style={styles.seeAllButton}
+                  onPress={() => {
+                    router.push('/events');
+                    // In a real app, we would set the filter to 'saved' on the events screen
+                  }}
+                >
+                  <Text style={styles.seeAllText}>See All</Text>
+                  <ChevronRight size={16} color={Colors.primary} />
+                </TouchableOpacity>
+              </View>
+
+              <FlatList
+                data={savedEvents.slice(0, 5)}
+                renderItem={renderEventItem}
+                keyExtractor={(item) => item.id}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.horizontalListContent}
+              />
+            </View>
+          )}
+
+          {/* Nearby Mosques Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={[
+                styles.sectionTitle,
+                isDarkMode && styles.sectionTitleDark
+              ]}>Nearby Mosques</Text>
+              <TouchableOpacity 
+                style={styles.seeAllButton}
+                onPress={() => router.push('/mosques')}
+              >
+                <Text style={styles.seeAllText}>See All</Text>
+                <ChevronRight size={16} color={Colors.primary} />
+              </TouchableOpacity>
+            </View>
+
+            {nearbyMosques.length > 0 ? (
+              <FlatList
+                data={nearbyMosques.slice(0, 5)}
+                renderItem={renderMosqueItem}
+                keyExtractor={(item) => item.id}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.horizontalListContent}
+              />
+            ) : (
+              <EmptyState
+                title="No Mosques Found"
+                message="We couldn't find any mosques near your current location."
               />
             )}
           </View>
@@ -444,34 +442,5 @@ const styles = StyleSheet.create({
   },
   footer: {
     height: 24,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-  },
-  calendarModalContent: {
-    backgroundColor: Colors.white,
-    borderRadius: 12,
-    margin: 20,
-    padding: 20,
-    maxHeight: '80%',
-  },
-  calendarModalContentDark: {
-    backgroundColor: '#1E1E1E',
-  },
-  calendarModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  calendarModalTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: Colors.text,
-  },
-  calendarModalTitleDark: {
-    color: Colors.white,
   },
 });

@@ -24,8 +24,9 @@ export default function MosquesScreen() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredMosques, setFilteredMosques] = useState(allMosques);
-  const [selectedFilter, setSelectedFilter] = useState('nearby');
+  const [sortBy, setSortBy] = useState('relevance');
   const [showFilterModal, setShowFilterModal] = useState(false);
+  const [showSortModal, setShowSortModal] = useState(false);
   const [customLocation, setCustomLocation] = useState('');
   
   // Filter settings
@@ -38,17 +39,7 @@ export default function MosquesScreen() {
   const languages = ['All', 'English', 'Arabic', 'Urdu', 'Farsi', 'Turkish'];
 
   useEffect(() => {
-    if (selectedFilter === 'nearby' && nearbyMosques.length > 0) {
-      setFilteredMosques(nearbyMosques);
-    } else {
-      setFilteredMosques(allMosques);
-    }
-  }, [selectedFilter, nearbyMosques, allMosques]);
-
-  useEffect(() => {
-    let mosques = selectedFilter === 'nearby' && nearbyMosques.length > 0 
-      ? nearbyMosques 
-      : allMosques;
+    let mosques = allMosques;
     
     // Apply denomination filter
     if (filterSettings.denomination && filterSettings.denomination !== 'All') {
@@ -70,8 +61,46 @@ export default function MosquesScreen() {
       );
     }
     
+    // Apply sorting
+    if (sortBy === 'distance' && location) {
+      mosques = [...mosques].sort((a, b) => {
+        const distanceA = calculateDistance(
+          location.coords.latitude,
+          location.coords.longitude,
+          a.latitude,
+          a.longitude
+        );
+        const distanceB = calculateDistance(
+          location.coords.latitude,
+          location.coords.longitude,
+          b.latitude,
+          b.longitude
+        );
+        return distanceA - distanceB;
+      });
+    }
+    
     setFilteredMosques(mosques);
-  }, [searchQuery, selectedFilter, nearbyMosques, allMosques, filterSettings]);
+  }, [searchQuery, allMosques, filterSettings, sortBy, location]);
+
+  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371; // Radius of the earth in km
+    const dLat = deg2rad(lat2 - lat1);
+    const dLon = deg2rad(lon2 - lon1);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(deg2rad(lat1)) *
+        Math.cos(deg2rad(lat2)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distance = R * c; // Distance in km
+    return distance;
+  };
+
+  const deg2rad = (deg) => {
+    return deg * (Math.PI / 180);
+  };
 
   const clearSearch = () => {
     setSearchQuery('');
@@ -112,28 +141,13 @@ export default function MosquesScreen() {
               styles.filterButton,
               isDarkMode && styles.filterButtonDark
             ]}
-            onPress={() => setSelectedFilter('nearby')}
-          >
-            <MapPin size={18} color={isDarkMode ? Colors.white : Colors.text} />
-            <Text style={[
-              styles.filterButtonText,
-              isDarkMode && styles.filterButtonTextDark,
-              selectedFilter === 'nearby' && styles.activeFilterText
-            ]}>Nearby</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[
-              styles.filterButton,
-              isDarkMode && styles.filterButtonDark
-            ]}
-            onPress={() => setSelectedFilter('all')}
+            onPress={() => setShowSortModal(true)}
           >
             <Text style={[
               styles.filterButtonText,
               isDarkMode && styles.filterButtonTextDark,
-              selectedFilter === 'all' && styles.activeFilterText
-            ]}>All Mosques</Text>
+              sortBy === 'distance' && styles.activeFilterText
+            ]}>Sort: {sortBy === 'distance' ? 'Distance' : 'Relevance'}</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -173,6 +187,79 @@ export default function MosquesScreen() {
         />
       )}
 
+      {/* Sort Modal */}
+      <Modal
+        visible={showSortModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowSortModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[
+            styles.sortModalContent,
+            isDarkMode && styles.modalContentDark
+          ]}>
+            <View style={styles.modalHeader}>
+              <Text style={[
+                styles.modalTitle,
+                isDarkMode && styles.modalTitleDark
+              ]}>Sort By</Text>
+            </View>
+            
+            <TouchableOpacity
+              style={[
+                styles.sortOption,
+                sortBy === 'relevance' && styles.selectedSortOption
+              ]}
+              onPress={() => {
+                setSortBy('relevance');
+                setShowSortModal(false);
+              }}
+            >
+              <Text style={[
+                styles.sortOptionText,
+                isDarkMode && styles.sortOptionTextDark,
+                sortBy === 'relevance' && styles.selectedSortOptionText
+              ]}>
+                Relevance
+              </Text>
+              {sortBy === 'relevance' && (
+                <View style={styles.selectedIndicator} />
+              )}
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[
+                styles.sortOption,
+                sortBy === 'distance' && styles.selectedSortOption
+              ]}
+              onPress={() => {
+                setSortBy('distance');
+                setShowSortModal(false);
+              }}
+            >
+              <Text style={[
+                styles.sortOptionText,
+                isDarkMode && styles.sortOptionTextDark,
+                sortBy === 'distance' && styles.selectedSortOptionText
+              ]}>
+                Distance
+              </Text>
+              {sortBy === 'distance' && (
+                <View style={styles.selectedIndicator} />
+              )}
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => setShowSortModal(false)}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* Filter Modal */}
       <Modal
         visible={showFilterModal}
@@ -190,9 +277,6 @@ export default function MosquesScreen() {
                 styles.modalTitle,
                 isDarkMode && styles.modalTitleDark
               ]}>Filter Mosques</Text>
-              <TouchableOpacity onPress={() => setShowFilterModal(false)}>
-                <Text style={styles.modalCloseButton}>Close</Text>
-              </TouchableOpacity>
             </View>
             
             {/* Denomination Filter */}
@@ -317,15 +401,23 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
+    height: '80%',
+  },
+  sortModalContent: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
   },
   modalContentDark: {
     backgroundColor: '#1E1E1E',
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
   },
   modalTitle: {
     fontSize: 20,
@@ -334,10 +426,6 @@ const styles = StyleSheet.create({
   },
   modalTitleDark: {
     color: Colors.white,
-  },
-  modalCloseButton: {
-    fontSize: 16,
-    color: Colors.primary,
   },
   filterSection: {
     marginBottom: 20,
@@ -378,6 +466,46 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: Colors.white,
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  sortOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  selectedSortOption: {
+    backgroundColor: Colors.primaryLight,
+  },
+  sortOptionText: {
+    fontSize: 16,
+    color: Colors.text,
+  },
+  sortOptionTextDark: {
+    color: Colors.white,
+  },
+  selectedSortOptionText: {
+    fontWeight: '600',
+    color: Colors.primary,
+  },
+  selectedIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.primary,
+  },
+  cancelButton: {
+    marginTop: 20,
+    padding: 15,
+    borderRadius: 8,
+    backgroundColor: Colors.card,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: Colors.text,
     fontWeight: '600',
     fontSize: 16,
   },

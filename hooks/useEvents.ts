@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { events, Event } from '@/mocks/events';
 import { calculateDistance } from '@/utils/location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -30,7 +30,7 @@ export default function useEvents(
   }, []);
 
   // Load saved events from AsyncStorage
-  const loadSavedEvents = async () => {
+  const loadSavedEvents = useCallback(async () => {
     try {
       const savedEventIds = await AsyncStorage.getItem('savedEvents');
       if (savedEventIds) {
@@ -45,7 +45,7 @@ export default function useEvents(
     } catch (error) {
       console.error('Error loading saved events:', error);
     }
-  };
+  }, []);
 
   // Save an event
   const saveEvent = async (eventId: string) => {

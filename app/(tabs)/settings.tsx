@@ -1,17 +1,25 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Switch, ScrollView, Linking, Platform } from 'react-native';
-import { ChevronRight, Bell, MapPin, Globe, Moon, Info, Heart, Clock } from 'lucide-react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Switch, ScrollView, Linking, Platform, Modal, FlatList } from 'react-native';
+import { ChevronRight, Bell, Moon, Info, Heart, Clock, Globe, X } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { globalStyles } from '@/constants/theme';
 import useThemeStore from '@/hooks/useThemeStore';
 
+// Available languages
+const languages = [
+  { id: 'en', name: 'English' },
+  { id: 'ar', name: 'Arabic' },
+  { id: 'ur', name: 'Urdu' },
+  { id: 'fa', name: 'Farsi' },
+  { id: 'tr', name: 'Turkish' }
+];
+
 export default function SettingsScreen() {
-  const { isDarkMode, toggleDarkMode, use24HourFormat, toggleTimeFormat } = useThemeStore();
-  const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
-  const [locationEnabled, setLocationEnabled] = React.useState(true);
+  const { isDarkMode, toggleDarkMode, use24HourFormat, toggleTimeFormat, language, setLanguage } = useThemeStore();
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
 
   const toggleNotifications = () => setNotificationsEnabled(prev => !prev);
-  const toggleLocation = () => setLocationEnabled(prev => !prev);
 
   const handleAboutPress = () => {
     Linking.openURL('https://kamal-aldeen.com');
@@ -23,6 +31,16 @@ export default function SettingsScreen() {
       : 'https://play.google.com/store/apps/details?id=com.kamalaldeen.mosquefinder';
     
     Linking.openURL(url);
+  };
+
+  const handleLanguageSelect = (langId: string) => {
+    setLanguage(langId);
+    setShowLanguageModal(false);
+  };
+
+  const getLanguageName = () => {
+    const lang = languages.find(l => l.id === language);
+    return lang ? lang.name : 'English';
   };
 
   const renderSettingItem = (
@@ -79,13 +97,6 @@ export default function SettingsScreen() {
           toggleNotifications
         )}
         {renderSettingItem(
-          <MapPin size={20} color={Colors.primary} />,
-          'Location Services',
-          true,
-          locationEnabled,
-          toggleLocation
-        )}
-        {renderSettingItem(
           <Moon size={20} color={Colors.primary} />,
           'Dark Mode',
           true,
@@ -101,11 +112,11 @@ export default function SettingsScreen() {
         )}
         {renderSettingItem(
           <Globe size={20} color={Colors.primary} />,
-          'Language',
+          `Language: ${getLanguageName()}`,
           false,
           undefined,
           undefined,
-          () => {}
+          () => setShowLanguageModal(true)
         )}
       </View>
 
@@ -138,6 +149,57 @@ export default function SettingsScreen() {
           isDarkMode && styles.versionDark
         ]}>Version 1.0.0</Text>
       </View>
+
+      {/* Language Selection Modal */}
+      <Modal
+        visible={showLanguageModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowLanguageModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[
+            styles.modalContent,
+            isDarkMode && styles.modalContentDark
+          ]}>
+            <View style={styles.modalHeader}>
+              <Text style={[
+                styles.modalTitle,
+                isDarkMode && styles.modalTitleDark
+              ]}>Select Language</Text>
+              <TouchableOpacity onPress={() => setShowLanguageModal(false)}>
+                <X size={24} color={isDarkMode ? Colors.white : Colors.text} />
+              </TouchableOpacity>
+            </View>
+            
+            <FlatList
+              data={languages}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <TouchableOpacity 
+                  style={[
+                    styles.languageItem,
+                    language === item.id && styles.selectedLanguageItem
+                  ]}
+                  onPress={() => handleLanguageSelect(item.id)}
+                >
+                  <Text style={[
+                    styles.languageItemText,
+                    language === item.id && styles.selectedLanguageItemText,
+                    isDarkMode && styles.languageItemTextDark
+                  ]}>
+                    {item.name}
+                  </Text>
+                  {language === item.id && (
+                    <View style={styles.selectedIndicator} />
+                  )}
+                </TouchableOpacity>
+              )}
+              contentContainerStyle={styles.languageList}
+            />
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -200,5 +262,68 @@ const styles = StyleSheet.create({
   },
   versionDark: {
     color: '#AAAAAA',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    width: '80%',
+    maxHeight: '70%',
+    ...globalStyles.shadow,
+  },
+  modalContentDark: {
+    backgroundColor: '#1E1E1E',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  modalTitleDark: {
+    color: Colors.white,
+  },
+  languageList: {
+    paddingBottom: 16,
+  },
+  languageItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  selectedLanguageItem: {
+    backgroundColor: Colors.primaryLight,
+  },
+  languageItemText: {
+    fontSize: 16,
+    color: Colors.text,
+  },
+  languageItemTextDark: {
+    color: Colors.white,
+  },
+  selectedLanguageItemText: {
+    fontWeight: '600',
+    color: Colors.primary,
+  },
+  selectedIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.primary,
   },
 });

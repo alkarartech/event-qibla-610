@@ -43,6 +43,9 @@ const eventCategories = [
 // Languages
 const languages = ['All', 'English', 'Arabic', 'Urdu', 'Farsi', 'Turkish'];
 
+// Denominations
+const denominations = ['All', 'Sunni', 'Shia'];
+
 export default function EventsScreen() {
   const { location, locationName, loading: locationLoading } = useLocation();
   const { allEvents, nearbyEvents, savedEvents, loading: eventsLoading } = useEvents(
@@ -68,6 +71,7 @@ export default function EventsScreen() {
     category: 'all',
     saved: false,
     language: 'All',
+    denomination: 'All',
     proximity: 10, // in km
   });
 
@@ -120,6 +124,13 @@ export default function EventsScreen() {
       // In a real app, events would have a languages property
       // This is a placeholder for when language data is available
       // events = events.filter(event => event.languages?.includes(filterSettings.language));
+    }
+    
+    // Apply denomination filter
+    if (filterSettings.denomination !== 'All') {
+      // In a real app, events would have a denomination property
+      // This is a placeholder for when denomination data is available
+      // events = events.filter(event => event.denomination === filterSettings.denomination);
     }
     
     // Apply search query
@@ -216,6 +227,7 @@ export default function EventsScreen() {
       <Text 
         style={[
           styles.timeFilterOptionText,
+          isDarkMode && styles.timeFilterOptionTextDark,
           selectedTimeFilter === item.id && styles.selectedTimeFilterOptionText
         ]}
       >
@@ -400,6 +412,7 @@ export default function EventsScreen() {
                 <Text 
                   style={[
                     styles.timeFilterOptionText,
+                    isDarkMode && styles.timeFilterOptionTextDark,
                     sortBy === option.id && styles.selectedTimeFilterOptionText
                   ]}
                 >
@@ -425,7 +438,7 @@ export default function EventsScreen() {
           <View style={[
             styles.modalContent,
             isDarkMode && styles.modalContentDark,
-            { height: 500 }
+            { height: '80%' }
           ]}>
             <View style={styles.modalHeader}>
               <Text style={[
@@ -459,6 +472,7 @@ export default function EventsScreen() {
                   >
                     <Text style={[
                       styles.filterChipText,
+                      isDarkMode && styles.filterChipTextDark,
                       filterSettings.category === category.id && styles.filterChipTextSelected
                     ]}>
                       {category.label}
@@ -487,6 +501,7 @@ export default function EventsScreen() {
               >
                 <Text style={[
                   styles.savedFilterButtonText,
+                  isDarkMode && styles.savedFilterButtonTextDark,
                   filterSettings.saved && styles.savedFilterButtonTextSelected
                 ]}>
                   Show only saved events
@@ -515,9 +530,41 @@ export default function EventsScreen() {
                   >
                     <Text style={[
                       styles.filterChipText,
+                      isDarkMode && styles.filterChipTextDark,
                       filterSettings.language === language && styles.filterChipTextSelected
                     ]}>
                       {language}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+            
+            <View style={styles.filterSection}>
+              <Text style={[
+                styles.filterSectionTitle,
+                isDarkMode && styles.filterSectionTitleDark
+              ]}>Denomination</Text>
+              
+              <View style={styles.filterChipsContainer}>
+                {denominations.map((denomination) => (
+                  <TouchableOpacity
+                    key={denomination}
+                    style={[
+                      styles.filterChip,
+                      filterSettings.denomination === denomination && styles.filterChipSelected
+                    ]}
+                    onPress={() => setFilterSettings(prev => ({
+                      ...prev,
+                      denomination
+                    }))}
+                  >
+                    <Text style={[
+                      styles.filterChipText,
+                      isDarkMode && styles.filterChipTextDark,
+                      filterSettings.denomination === denomination && styles.filterChipTextSelected
+                    ]}>
+                      {denomination}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -532,7 +579,10 @@ export default function EventsScreen() {
               
               <View style={styles.proximityContainer}>
                 <TextInput
-                  style={styles.proximityInput}
+                  style={[
+                    styles.proximityInput,
+                    isDarkMode && styles.proximityInputDark
+                  ]}
                   keyboardType="numeric"
                   value={filterSettings.proximity.toString()}
                   onChangeText={(text) => setFilterSettings(prev => ({
@@ -556,6 +606,7 @@ export default function EventsScreen() {
                   category: 'all',
                   saved: false,
                   language: 'All',
+                  denomination: 'All',
                   proximity: 10
                 })}
               >
@@ -749,6 +800,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.text,
   },
+  timeFilterOptionTextDark: {
+    color: Colors.white,
+  },
   selectedTimeFilterOptionText: {
     color: Colors.primary,
     fontWeight: '500',
@@ -793,6 +847,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.text,
   },
+  filterChipTextDark: {
+    color: Colors.white,
+  },
   filterChipTextSelected: {
     color: Colors.white,
   },
@@ -810,6 +867,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.text,
   },
+  savedFilterButtonTextDark: {
+    color: Colors.white,
+  },
   savedFilterButtonTextSelected: {
     color: Colors.white,
   },
@@ -825,6 +885,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     width: 80,
     fontSize: 16,
+    color: Colors.text,
+  },
+  proximityInputDark: {
+    borderColor: '#333333',
+    color: Colors.white,
+    backgroundColor: '#2a2a2a',
   },
   proximityLabel: {
     marginLeft: 8,

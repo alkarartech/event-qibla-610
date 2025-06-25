@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, Modal, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, MapPin, X } from 'lucide-react-native';
@@ -60,6 +60,22 @@ const islamicEvents = [
   { name: "Eid Mubahila", day: 24, month: 12 },
 ];
 
+// Hijri month names
+const hijriMonthNames = [
+  "Muharram",
+  "Safar",
+  "Rabi al-Awwal",
+  "Rabi al-Thani",
+  "Jumada al-Awwal",
+  "Jumada al-Thani",
+  "Rajab",
+  "Sha'ban",
+  "Ramadan",
+  "Shawwal",
+  "Dhu al-Qi'dah",
+  "Dhu al-Hijjah"
+];
+
 // Hijri date conversion functions
 const gregorianToHijri = (date: Date) => {
   // This is a simplified conversion and not 100% accurate
@@ -96,6 +112,7 @@ export default function CalendarScreen() {
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [showEventDetails, setShowEventDetails] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [lastClickTime, setLastClickTime] = useState(0);
   
   // Refresh saved events when component mounts
   useEffect(() => {
@@ -162,6 +179,8 @@ export default function CalendarScreen() {
   // Format date based on view mode
   const formatDateHeader = () => {
     const options: Intl.DateTimeFormatOptions = {};
+    const hijriDate = gregorianToHijri(currentDate);
+    const hijriMonthName = hijriMonthNames[hijriDate.month - 1];
     
     switch (viewMode) {
       case 'day':
@@ -169,7 +188,7 @@ export default function CalendarScreen() {
         options.year = 'numeric';
         options.month = 'long';
         options.day = 'numeric';
-        break;
+        return `${currentDate.toLocaleDateString('default', options)}\n${hijriMonthName} ${hijriDate.day}, ${hijriDate.year} Hijri`;
       case 'week':
         const startOfWeek = new Date(currentDate);
         startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
@@ -179,14 +198,17 @@ export default function CalendarScreen() {
         const startMonth = startOfWeek.toLocaleString('default', { month: 'short' });
         const endMonth = endOfWeek.toLocaleString('default', { month: 'short' });
         
-        return `${startMonth} ${startOfWeek.getDate()} - ${endMonth} ${endOfWeek.getDate()}, ${currentDate.getFullYear()}`;
+        const startHijri = gregorianToHijri(startOfWeek);
+        const endHijri = gregorianToHijri(endOfWeek);
+        
+        return `${startMonth} ${startOfWeek.getDate()} - ${endMonth} ${endOfWeek.getDate()}, ${currentDate.getFullYear()}\n${hijriMonthNames[startHijri.month - 1]} ${startHijri.day} - ${hijriMonthNames[endHijri.month - 1]} ${endHijri.day}, ${hijriDate.year} Hijri`;
       case 'month':
         options.year = 'numeric';
         options.month = 'long';
-        break;
+        return `${currentDate.toLocaleDateString('default', options)}\n${hijriMonthName} ${hijriDate.year} Hijri`;
       case 'year':
         options.year = 'numeric';
-        break;
+        return `${currentDate.getFullYear()}\n${hijriDate.year} Hijri`;
     }
     
     return currentDate.toLocaleDateString('default', options);
@@ -228,7 +250,8 @@ export default function CalendarScreen() {
         hijriDay: hijriDate.day,
         hijriMonth: hijriDate.month,
         hasEvents,
-        hasIslamicEvents
+        hasIslamicEvents,
+        isNewHijriMonth: hijriDate.day === 1 || (i === 1)
       });
     }
     
@@ -248,7 +271,25 @@ export default function CalendarScreen() {
         return eventDate.getMonth() === i && eventDate.getFullYear() === year;
       });
       
-      months.push({ month: i, name: monthName, hasEvents });
+      // Get hijri months that overlap with this gregorian month
+      const startOfMonth = new Date(year, i, 1);
+      const endOfMonth = new Date(year, i + 1, 0);
+      const startHijri = gregorianToHijri(startOfMonth);
+      const endHijri = gregorianToHijri(endOfMonth);
+      
+      let hijriMonthsText = '';
+      if (startHijri.month === endHijri.month) {
+        hijriMonthsText = hijriMonthNames[startHijri.month - 1];
+      } else {
+        hijriMonthsText = `${hijriMonthNames[startHijri.month - 1]} / ${hijriMonthNames[endHijri.month - 1]}`;
+      }
+      
+      months.push({ 
+        month: i, 
+        name: monthName, 
+        hasEvents,
+        hijriMonths: hijriMonthsText
+      });
     }
     
     return months;
@@ -257,15 +298,26 @@ export default function CalendarScreen() {
   // Generate hours for the day view
   const generateDayHours = () => {
     const hours = [];
-    const startHour = 6; // Start at 6 AM
-    const endHour = 22; // End at 10 PM
+    const startHour = 0; // Start at 12 AM
+    const endHour = 23; // End at 11 PM
     
     for (let i = startHour; i <= endHour; i++) {
       const hour = use24HourFormat ? i : (i % 12 || 12);
       const ampm = i < 12 ? 'AM' : 'PM';
-      const label = use24HourFormat ? `${hour}:00` : `${hour}:00 ${ampm}`;
+      const label = use24HourFormat ? `${i.toString().padStart(2, '0')}:00` : `${hour}:00 ${ampm}`;
       
-      hours.push({ hour: i, label });
+      // Check if there are events during this hour
+      const eventsThisHour = eventsForSelectedDate.filter(event => {
+        const eventTime = event.time;
+        const eventHour = parseInt(eventTime.split(':')[0]);
+        return eventHour === i;
+      });
+      
+      hours.push({ 
+        hour: i, 
+        label,
+        events: eventsThisHour
+      });
     }
     
     return hours;
@@ -319,6 +371,23 @@ export default function CalendarScreen() {
     }
   };
   
+  // Handle day cell click with double-click detection
+  const handleDayCellClick = useCallback((date: Date) => {
+    const now = new Date().getTime();
+    const DOUBLE_CLICK_DELAY = 300; // ms
+    
+    if (now - lastClickTime < DOUBLE_CLICK_DELAY) {
+      // Double click detected
+      setSelectedDate(date);
+      setViewMode('day');
+    } else {
+      // Single click
+      setSelectedDate(date);
+    }
+    
+    setLastClickTime(now);
+  }, [lastClickTime]);
+  
   // Render month view
   const renderMonthView = () => {
     const days = generateMonthDays();
@@ -356,8 +425,7 @@ export default function CalendarScreen() {
               ]}
               onPress={() => {
                 if (item.day !== 0 && item.date) {
-                  setSelectedDate(item.date);
-                  setViewMode('day');
+                  handleDayCellClick(item.date);
                 }
               }}
               disabled={item.day === 0}
@@ -376,7 +444,10 @@ export default function CalendarScreen() {
                     ]}>
                       {item.day}
                     </Text>
-                    <Text style={styles.hijriDayText}>
+                    <Text style={[
+                      styles.hijriDayText,
+                      item.isNewHijriMonth && styles.newHijriMonthText
+                    ]}>
                       {item.hijriDay}
                     </Text>
                   </View>
@@ -393,6 +464,64 @@ export default function CalendarScreen() {
               )}
             </TouchableOpacity>
           ))}
+        </View>
+        
+        {/* Events for selected date in month view */}
+        <View style={styles.monthViewEventsContainer}>
+          <Text style={[
+            styles.monthViewEventsTitle,
+            isDarkMode && styles.monthViewEventsTitleDark
+          ]}>
+            Events for {selectedDate.toLocaleDateString()}
+          </Text>
+          
+          {eventsForSelectedDate.length > 0 ? (
+            eventsForSelectedDate.map((event) => (
+              <TouchableOpacity
+                key={event.id}
+                style={[
+                  styles.monthViewEventItem,
+                  isDarkMode && styles.monthViewEventItemDark
+                ]}
+                onPress={() => handleEventPress(event)}
+              >
+                <View style={styles.eventTimeContainer}>
+                  <Clock size={16} color={Colors.primary} />
+                  <Text style={styles.eventTime}>
+                    {formatTime(event.time)}
+                  </Text>
+                </View>
+                
+                <View style={styles.eventContent}>
+                  <Text style={[
+                    styles.eventTitle,
+                    isDarkMode && styles.eventTitleDark
+                  ]}>
+                    {event.title}
+                  </Text>
+                  
+                  <View style={styles.eventLocationContainer}>
+                    <MapPin size={14} color={isDarkMode ? '#AAAAAA' : Colors.textSecondary} />
+                    <Text style={[
+                      styles.eventLocation,
+                      isDarkMode && styles.eventLocationDark
+                    ]}>
+                      {event.mosque_name}
+                    </Text>
+                  </View>
+                </View>
+                
+                <ChevronRight size={16} color={isDarkMode ? Colors.white : Colors.textSecondary} />
+              </TouchableOpacity>
+            ))
+          ) : (
+            <Text style={[
+              styles.noEventsText,
+              isDarkMode && styles.noEventsTextDark
+            ]}>
+              No events scheduled for this day
+            </Text>
+          )}
         </View>
       </View>
     );
@@ -430,6 +559,9 @@ export default function CalendarScreen() {
             ]}>
               {item.name}
             </Text>
+            <Text style={styles.hijriMonthsText}>
+              {item.hijriMonths}
+            </Text>
             {item.hasEvents && (
               <View style={styles.monthEventDot} />
             )}
@@ -461,7 +593,7 @@ export default function CalendarScreen() {
           styles.hijriDateText,
           isDarkMode && styles.hijriDateTextDark
         ]}>
-          Hijri: {selectedHijriDate.day}/{selectedHijriDate.month}/{selectedHijriDate.year}
+          {hijriMonthNames[selectedHijriDate.month - 1]} {selectedHijriDate.day}, {selectedHijriDate.year} Hijri
         </Text>
         
         {islamicEventsForSelectedDate.length > 0 && (
@@ -555,7 +687,23 @@ export default function CalendarScreen() {
               <View style={[
                 styles.timelineLine,
                 isDarkMode && styles.timelineLineDark
-              ]} />
+              ]}>
+                {hour.events.length > 0 && (
+                  <View style={styles.timelineEvent}>
+                    {hour.events.map(event => (
+                      <TouchableOpacity
+                        key={event.id}
+                        style={styles.timelineEventBlock}
+                        onPress={() => handleEventPress(event)}
+                      >
+                        <Text style={styles.timelineEventText} numberOfLines={1}>
+                          {event.title}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
             </View>
           ))}
         </View>
@@ -791,6 +939,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: Colors.text,
+    textAlign: 'center',
   },
   currentPeriodDark: {
     color: Colors.white,
@@ -876,6 +1025,10 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: Colors.textSecondary,
   },
+  newHijriMonthText: {
+    color: '#E91E63',
+    fontWeight: 'bold',
+  },
   selectedDayText: {
     color: Colors.white,
     fontWeight: '600',
@@ -914,6 +1067,12 @@ const styles = StyleSheet.create({
   },
   monthCellTextDark: {
     color: Colors.white,
+  },
+  hijriMonthsText: {
+    fontSize: 10,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 4,
   },
   selectedMonthCellText: {
     color: Colors.white,
@@ -1058,11 +1217,31 @@ const styles = StyleSheet.create({
   },
   timelineLine: {
     flex: 1,
-    height: 1,
+    height: 30,
     backgroundColor: Colors.border,
+    position: 'relative',
   },
   timelineLineDark: {
     backgroundColor: '#333333',
+  },
+  timelineEvent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  timelineEventBlock: {
+    backgroundColor: Colors.primary,
+    borderRadius: 4,
+    padding: 4,
+    margin: 2,
+    flex: 1,
+  },
+  timelineEventText: {
+    color: Colors.white,
+    fontSize: 12,
+    fontWeight: '500',
   },
   eventModalOverlay: {
     flex: 1,
@@ -1139,5 +1318,32 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontSize: 16,
     fontWeight: '600',
+  },
+  monthViewEventsContainer: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    marginTop: 8,
+  },
+  monthViewEventsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: 12,
+  },
+  monthViewEventsTitleDark: {
+    color: Colors.white,
+  },
+  monthViewEventItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: Colors.white,
+    borderRadius: 8,
+    marginBottom: 8,
+    ...globalStyles.shadow,
+  },
+  monthViewEventItemDark: {
+    backgroundColor: '#1E1E1E',
   },
 });

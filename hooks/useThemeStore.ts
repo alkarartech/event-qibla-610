@@ -8,6 +8,8 @@ interface ThemeState {
   toggleDarkMode: () => void;
   use24HourFormat: boolean;
   toggleTimeFormat: () => void;
+  language: string;
+  setLanguage: (lang: string) => void;
   getColors: () => typeof Colors;
 }
 
@@ -16,8 +18,10 @@ const useThemeStore = create<ThemeState>()(
     (set, get) => ({
       isDarkMode: false,
       use24HourFormat: false,
+      language: 'en',
       toggleDarkMode: () => set((state) => ({ isDarkMode: !state.isDarkMode })),
       toggleTimeFormat: () => set((state) => ({ use24HourFormat: !state.use24HourFormat })),
+      setLanguage: (lang) => set({ language: lang }),
       getColors: () => {
         const { isDarkMode } = get();
         if (isDarkMode) {
