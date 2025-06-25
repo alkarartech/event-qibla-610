@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { mosques, Mosque } from '@/mocks/mosques';
 import { getMosquesWithinRadius } from '@/utils/location';
 
@@ -21,7 +21,7 @@ export default function useMosques(
     error: null,
   });
 
-  useEffect(() => {
+  const updateNearbyMosques = useCallback(() => {
     if (latitude && longitude) {
       try {
         const nearby = getMosquesWithinRadius(mosques, latitude, longitude, radius);
@@ -46,6 +46,10 @@ export default function useMosques(
     }
   }, [latitude, longitude, radius]);
 
+  useEffect(() => {
+    updateNearbyMosques();
+  }, [updateNearbyMosques]);
+
   const getMosqueById = (id: string): Mosque | undefined => {
     return mosques.find(mosque => mosque.id === id);
   };
@@ -53,5 +57,6 @@ export default function useMosques(
   return {
     ...state,
     getMosqueById,
+    refreshNearbyMosques: updateNearbyMosques,
   };
 }

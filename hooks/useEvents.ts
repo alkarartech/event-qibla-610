@@ -95,6 +95,7 @@ export default function useEvents(
     return state.savedEvents.some(event => event.id === eventId);
   };
 
+  // Update nearby events when location changes
   useEffect(() => {
     if (latitude && longitude) {
       try {

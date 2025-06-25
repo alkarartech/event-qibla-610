@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import * as Location from 'expo-location';
 import { Platform } from 'react-native';
 import { getCurrentLocation, getLocationName } from '@/utils/location';
@@ -18,7 +18,7 @@ export default function useLocation() {
     error: null,
   });
 
-  const fetchLocation = async () => {
+  const fetchLocation = useCallback(async () => {
     setState(prev => ({ ...prev, loading: true, error: null }));
     
     try {
@@ -49,11 +49,11 @@ export default function useLocation() {
         error: 'Error fetching location',
       }));
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchLocation();
-  }, []);
+  }, [fetchLocation]);
 
   return {
     ...state,

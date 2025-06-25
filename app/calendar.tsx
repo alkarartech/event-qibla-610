@@ -7,6 +7,14 @@ import { globalStyles } from '@/constants/theme';
 import useThemeStore from '@/hooks/useThemeStore';
 import useEvents from '@/hooks/useEvents';
 import { Event } from '@/mocks/events';
+import { 
+  gregorianToHijri, 
+  hijriMonthNames, 
+  getIslamicEventsForDate,
+  isFirstDayOfHijriMonth,
+  getHijriMonthsForGregorianMonth
+} from '@/utils/hijriDate';
+import { formatTime, getDaysInMonth, isSameDay } from '@/utils/dateUtils';
 
 // Islamic Events Data with Numeric Months
 const islamicEvents = [
@@ -60,45 +68,6 @@ const islamicEvents = [
   { name: "Eid Mubahila", day: 24, month: 12 },
 ];
 
-// Hijri month names
-const hijriMonthNames = [
-  "Muharram",
-  "Safar",
-  "Rabi al-Awwal",
-  "Rabi al-Thani",
-  "Jumada al-Awwal",
-  "Jumada al-Thani",
-  "Rajab",
-  "Sha'ban",
-  "Ramadan",
-  "Shawwal",
-  "Dhu al-Qi'dah",
-  "Dhu al-Hijjah"
-];
-
-// Hijri date conversion functions
-const gregorianToHijri = (date: Date) => {
-  // This is a simplified conversion and not 100% accurate
-  // In a real app, you would use a proper Hijri calendar library
-  const gregorianYear = date.getFullYear();
-  const gregorianMonth = date.getMonth() + 1;
-  const gregorianDay = date.getDate();
-  
-  // Approximate conversion
-  const hijriYear = Math.floor((gregorianYear - 622) * (33/32));
-  const hijriMonth = ((gregorianMonth + 1) % 12) + 1;
-  const hijriDay = gregorianDay;
-  
-  return { year: hijriYear, month: hijriMonth, day: hijriDay };
-};
-
-// Get Islamic events for a specific Hijri date
-const getIslamicEventsForDate = (hijriDate: { year: number, month: number, day: number }) => {
-  return islamicEvents.filter(event => 
-    event.month === hijriDate.month && event.day === hijriDate.day
-  );
-};
-
 // Calendar view modes
 type ViewMode = 'month' | 'week' | 'day' | 'year';
 
@@ -117,13 +86,13 @@ export default function CalendarScreen() {
   // Refresh saved events when component mounts
   useEffect(() => {
     refreshSavedEvents();
-  }, []);
+  }, [refreshSavedEvents]);
   
   // Get events for the selected date
   const getEventsForDate = (date: Date) => {
     return savedEvents.filter(event => {
       const eventDate = new Date(event.date);
-      return eventDate.toDateString() === date.toDateString();
+      return isSameDay(eventDate, date);
     });
   };
   
@@ -134,7 +103,7 @@ export default function CalendarScreen() {
   const selectedHijriDate = gregorianToHijri(selectedDate);
   
   // Get Islamic events for the selected date
-  const islamicEventsForSelectedDate = getIslamicEventsForDate(selectedHijriDate);
+  const islamicEventsForSelectedDate = getIslamicEventsForDate(selectedHijriDate, islamicEvents);
   
   // Navigate to previous period based on current view mode
   const goToPrevious = () => {
@@ -188,7 +157,8 @@ export default function CalendarScreen() {
         options.year = 'numeric';
         options.month = 'long';
         options.day = 'numeric';
-        return `${currentDate.toLocaleDateString('default', options)}\n${hijriMonthName} ${hijriDate.day}, ${hijriDate.year} Hijri`;
+        return `${currentDate.toLocaleDateString('default', options)}
+${hijriMonthName} ${hijriDate.day}, ${hijriDate.year} Hijri`;
       case 'week':
         const startOfWeek = new Date(currentDate);
         startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
@@ -201,14 +171,17 @@ export default function CalendarScreen() {
         const startHijri = gregorianToHijri(startOfWeek);
         const endHijri = gregorianToHijri(endOfWeek);
         
-        return `${startMonth} ${startOfWeek.getDate()} - ${endMonth} ${endOfWeek.getDate()}, ${currentDate.getFullYear()}\n${hijriMonthNames[startHijri.month - 1]} ${startHijri.day} - ${hijriMonthNames[endHijri.month - 1]} ${endHijri.day}, ${hijriDate.year} Hijri`;
+        return `${startMonth} ${startOfWeek.getDate()} - ${endMonth} ${endOfWeek.getDate()}, ${currentDate.getFullYear()}
+${hijriMonthNames[startHijri.month - 1]} ${startHijri.day} - ${hijriMonthNames[endHijri.month - 1]} ${endHijri.day}, ${hijriDate.year} Hijri`;
       case 'month':
         options.year = 'numeric';
         options.month = 'long';
-        return `${currentDate.toLocaleDateString('default', options)}\n${hijriMonthName} ${hijriDate.year} Hijri`;
+        return `${currentDate.toLocaleDateString('default', options)}
+${hijriMonthName} ${hijriDate.year} Hijri`;
       case 'year':
         options.year = 'numeric';
-        return `${currentDate.getFullYear()}\n${hijriDate.year} Hijri`;
+        return `${currentDate.getFullYear()}
+${hijriDate.year} Hijri`;
     }
     
     return currentDate.toLocaleDateString('default', options);
@@ -221,7 +194,7 @@ export default function CalendarScreen() {
     
     // Get first day of month and number of days in month
     const firstDayOfMonth = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysInMonth = getDaysInMonth(year, month);
     
     // Create array for all days in the month view
     const days = [];
@@ -237,12 +210,10 @@ export default function CalendarScreen() {
       const hijriDate = gregorianToHijri(date);
       const hasEvents = savedEvents.some(event => {
         const eventDate = new Date(event.date);
-        return eventDate.getDate() === i && 
-               eventDate.getMonth() === month && 
-               eventDate.getFullYear() === year;
+        return isSameDay(eventDate, date);
       });
       
-      const hasIslamicEvents = getIslamicEventsForDate(hijriDate).length > 0;
+      const hasIslamicEvents = getIslamicEventsForDate(hijriDate, islamicEvents).length > 0;
       
       days.push({ 
         day: i, 
@@ -251,7 +222,7 @@ export default function CalendarScreen() {
         hijriMonth: hijriDate.month,
         hasEvents,
         hasIslamicEvents,
-        isNewHijriMonth: hijriDate.day === 1 || (i === 1)
+        isNewHijriMonth: isFirstDayOfHijriMonth(date)
       });
     }
     
@@ -272,17 +243,8 @@ export default function CalendarScreen() {
       });
       
       // Get hijri months that overlap with this gregorian month
-      const startOfMonth = new Date(year, i, 1);
-      const endOfMonth = new Date(year, i + 1, 0);
-      const startHijri = gregorianToHijri(startOfMonth);
-      const endHijri = gregorianToHijri(endOfMonth);
-      
-      let hijriMonthsText = '';
-      if (startHijri.month === endHijri.month) {
-        hijriMonthsText = hijriMonthNames[startHijri.month - 1];
-      } else {
-        hijriMonthsText = `${hijriMonthNames[startHijri.month - 1]} / ${hijriMonthNames[endHijri.month - 1]}`;
-      }
+      const hijriMonths = getHijriMonthsForGregorianMonth(year, i);
+      const hijriMonthsText = hijriMonths.join(' / ');
       
       months.push({ 
         month: i, 
@@ -321,34 +283,6 @@ export default function CalendarScreen() {
     }
     
     return hours;
-  };
-  
-  // Format time based on user preference
-  const formatTime = (timeString: string) => {
-    if (use24HourFormat) {
-      // Convert to 24-hour format if it's in 12-hour format
-      if (timeString.includes('AM') || timeString.includes('PM')) {
-        const [timePart, period] = timeString.split(' ');
-        const [hours, minutes] = timePart.split(':').map(Number);
-        
-        let hour24 = hours;
-        if (period === 'PM' && hours < 12) hour24 += 12;
-        if (period === 'AM' && hours === 12) hour24 = 0;
-        
-        return `${hour24.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-      }
-      return timeString;
-    } else {
-      // Convert to 12-hour format if it's in 24-hour format
-      if (!timeString.includes('AM') && !timeString.includes('PM')) {
-        const [hours, minutes] = timeString.split(':').map(Number);
-        const period = hours >= 12 ? 'PM' : 'AM';
-        const hour12 = hours % 12 || 12;
-        
-        return `${hour12}:${minutes.toString().padStart(2, '0')} ${period}`;
-      }
-      return timeString;
-    }
   };
   
   // Handle event press
@@ -418,9 +352,7 @@ export default function CalendarScreen() {
                 styles.dayCell,
                 item.day === 0 && styles.emptyCell,
                 item.date && 
-                  selectedDate.getDate() === item.day && 
-                  selectedDate.getMonth() === currentDate.getMonth() && 
-                  selectedDate.getFullYear() === currentDate.getFullYear() && 
+                  isSameDay(selectedDate, item.date) && 
                   styles.selectedCell
               ]}
               onPress={() => {
@@ -436,9 +368,7 @@ export default function CalendarScreen() {
                     <Text style={[
                       styles.dayText,
                       item.date && 
-                        selectedDate.getDate() === item.day && 
-                        selectedDate.getMonth() === currentDate.getMonth() && 
-                        selectedDate.getFullYear() === currentDate.getFullYear() && 
+                        isSameDay(selectedDate, item.date) && 
                         styles.selectedDayText,
                       isDarkMode && styles.dayTextDark
                     ]}>
@@ -488,7 +418,7 @@ export default function CalendarScreen() {
                 <View style={styles.eventTimeContainer}>
                   <Clock size={16} color={Colors.primary} />
                   <Text style={styles.eventTime}>
-                    {formatTime(event.time)}
+                    {formatTime(event.time, use24HourFormat)}
                   </Text>
                 </View>
                 
@@ -639,7 +569,7 @@ export default function CalendarScreen() {
                 <View style={styles.eventTimeContainer}>
                   <Clock size={16} color={Colors.primary} />
                   <Text style={styles.eventTime}>
-                    {formatTime(event.time)}
+                    {formatTime(event.time, use24HourFormat)}
                   </Text>
                 </View>
                 
@@ -854,7 +784,7 @@ export default function CalendarScreen() {
                     styles.eventModalDetailText,
                     isDarkMode && styles.eventModalDetailTextDark
                   ]}>
-                    {selectedEvent.date} • {formatTime(selectedEvent.time)}
+                    {selectedEvent.date} • {formatTime(selectedEvent.time, use24HourFormat)}
                   </Text>
                 </View>
                 

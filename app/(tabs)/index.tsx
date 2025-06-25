@@ -15,11 +15,12 @@ import useEvents from '@/hooks/useEvents';
 import { Mosque } from '@/mocks/mosques';
 import { Event } from '@/mocks/events';
 import useThemeStore from '@/hooks/useThemeStore';
+import { formatTime } from '@/utils/dateUtils';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { location, locationName, loading: locationLoading } = useLocation();
-  const { isDarkMode } = useThemeStore();
+  const { isDarkMode, use24HourFormat } = useThemeStore();
   
   const { nearbyMosques, loading: mosquesLoading } = useMosques(
     location?.coords.latitude,
@@ -41,8 +42,10 @@ export default function HomeScreen() {
   // Refresh saved events when component mounts or becomes active
   useEffect(() => {
     refreshSavedEvents();
-    
-    // Get upcoming events (sorted by date)
+  }, [refreshSavedEvents]);
+  
+  // Get upcoming events (sorted by date)
+  useEffect(() => {
     const today = new Date();
     const upcoming = [...nearbyEvents, ...savedEvents]
       .filter((event, index, self) => 
@@ -52,7 +55,7 @@ export default function HomeScreen() {
         new Date(event.date) >= today
       )
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-      .slice(0, 5);
+      .slice(0, 2); // Only show 2 upcoming events
     
     setUpcomingEvents(upcoming);
   }, [nearbyEvents, savedEvents]);
@@ -166,7 +169,7 @@ export default function HomeScreen() {
                         ]}
                         numberOfLines={1}
                       >
-                        {event.time} • {event.mosque_name}
+                        {formatTime(event.time, use24HourFormat)} • {event.mosque_name}
                       </Text>
                     </View>
                     <ChevronRight size={20} color={isDarkMode ? Colors.white : Colors.textSecondary} />
