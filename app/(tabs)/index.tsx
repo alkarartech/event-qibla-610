@@ -38,11 +38,6 @@ export default function HomeScreen() {
 
   const isLoading = locationLoading || mosquesLoading || eventsLoading;
 
-  // Refresh saved events when component mounts or becomes active
-  useEffect(() => {
-    refreshSavedEvents();
-  }, [refreshSavedEvents]);
-  
   // Get upcoming events (sorted by date)
   useEffect(() => {
     const today = new Date();

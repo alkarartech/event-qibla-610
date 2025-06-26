@@ -199,7 +199,7 @@ export default function EventsScreen() {
     });
   }, [refreshSavedEvents]);
 
-  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
     const R = 6371; // Radius of the earth in km
     const dLat = deg2rad(lat2 - lat1);
     const dLon = deg2rad(lon2 - lon1);
@@ -214,7 +214,7 @@ export default function EventsScreen() {
     return distance;
   };
 
-  const deg2rad = (deg) => {
+  const deg2rad = (deg: number): number => {
     return deg * (Math.PI / 180);
   };
 
@@ -222,14 +222,14 @@ export default function EventsScreen() {
     setSearchQuery('');
   };
 
-  const handleLocationSelect = (location) => {
+  const handleLocationSelect = (location: string) => {
     setCustomLocation(location);
     // In a real app, this would trigger a location-based search
   };
 
   const isLoading = locationLoading || eventsLoading;
 
-  const renderTimeFilterOption = ({ item }) => (
+  const renderTimeFilterOption = ({ item }: { item: typeof timeFilterOptions[0] }) => (
     <TouchableOpacity 
       style={[
         styles.timeFilterOption,
@@ -413,7 +413,7 @@ export default function EventsScreen() {
           <View style={[
             styles.modalContent,
             isDarkMode && styles.modalContentDark,
-            { height: 300 }
+            { height: 250 }
           ]}>
             <View style={styles.modalHeader}>
               <Text style={[
@@ -455,199 +455,205 @@ export default function EventsScreen() {
         </View>
       </Modal>
 
-      {/* Filter Modal */}
+      {/* Filter Modal - Full Screen */}
       <Modal
         visible={showFilterModal}
-        transparent={true}
+        transparent={false}
         animationType="slide"
         onRequestClose={() => setShowFilterModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[
-            styles.modalContent,
-            isDarkMode && styles.modalContentDark,
-            { height: '80%' }
-          ]}>
-            <View style={styles.modalHeader}>
-              <Text style={[
-                styles.modalTitle,
-                isDarkMode && styles.modalTitleDark
-              ]}>Filter Events</Text>
-              <TouchableOpacity onPress={() => setShowFilterModal(false)}>
-                <Text style={styles.modalCloseButton}>Close</Text>
-              </TouchableOpacity>
-            </View>
-            
-            <View style={styles.filterSection}>
-              <Text style={[
-                styles.filterSectionTitle,
-                isDarkMode && styles.filterSectionTitleDark
-              ]}>Event Type</Text>
-              
-              <View style={styles.filterChipsContainer}>
-                {eventCategories.map((category) => (
-                  <TouchableOpacity
-                    key={category.id}
-                    style={[
-                      styles.filterChip,
-                      filterSettings.category === category.id && styles.filterChipSelected
-                    ]}
-                    onPress={() => setFilterSettings(prev => ({
-                      ...prev,
-                      category: category.id,
-                      saved: false // Unselect saved when selecting a category
-                    }))}
-                  >
-                    <Text style={[
-                      styles.filterChipText,
-                      isDarkMode && styles.filterChipTextDark,
-                      filterSettings.category === category.id && styles.filterChipTextSelected
-                    ]}>
-                      {category.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-            
-            <View style={styles.filterSection}>
-              <Text style={[
-                styles.filterSectionTitle,
-                isDarkMode && styles.filterSectionTitleDark
-              ]}>Saved Events</Text>
-              
-              <TouchableOpacity
-                style={[
-                  styles.savedFilterButton,
-                  filterSettings.saved && styles.savedFilterButtonSelected
-                ]}
-                onPress={() => setFilterSettings(prev => ({
-                  ...prev,
-                  saved: !prev.saved,
-                  category: 'all' // Reset category when toggling saved
-                }))}
-              >
-                <Text style={[
-                  styles.savedFilterButtonText,
-                  isDarkMode && styles.savedFilterButtonTextDark,
-                  filterSettings.saved && styles.savedFilterButtonTextSelected
-                ]}>
-                  Show only saved events
-                </Text>
-              </TouchableOpacity>
-            </View>
-            
-            <View style={styles.filterSection}>
-              <Text style={[
-                styles.filterSectionTitle,
-                isDarkMode && styles.filterSectionTitleDark
-              ]}>Language</Text>
-              
-              <View style={styles.filterChipsContainer}>
-                {languages.map((language) => (
-                  <TouchableOpacity
-                    key={language}
-                    style={[
-                      styles.filterChip,
-                      filterSettings.language === language && styles.filterChipSelected
-                    ]}
-                    onPress={() => setFilterSettings(prev => ({
-                      ...prev,
-                      language
-                    }))}
-                  >
-                    <Text style={[
-                      styles.filterChipText,
-                      isDarkMode && styles.filterChipTextDark,
-                      filterSettings.language === language && styles.filterChipTextSelected
-                    ]}>
-                      {language}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-            
-            <View style={styles.filterSection}>
-              <Text style={[
-                styles.filterSectionTitle,
-                isDarkMode && styles.filterSectionTitleDark
-              ]}>Denomination</Text>
-              
-              <View style={styles.filterChipsContainer}>
-                {denominations.map((denomination) => (
-                  <TouchableOpacity
-                    key={denomination}
-                    style={[
-                      styles.filterChip,
-                      filterSettings.denomination === denomination && styles.filterChipSelected
-                    ]}
-                    onPress={() => setFilterSettings(prev => ({
-                      ...prev,
-                      denomination
-                    }))}
-                  >
-                    <Text style={[
-                      styles.filterChipText,
-                      isDarkMode && styles.filterChipTextDark,
-                      filterSettings.denomination === denomination && styles.filterChipTextSelected
-                    ]}>
-                      {denomination}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-            
-            <View style={styles.filterSection}>
-              <Text style={[
-                styles.filterSectionTitle,
-                isDarkMode && styles.filterSectionTitleDark
-              ]}>Proximity (km)</Text>
-              
-              <View style={styles.proximityContainer}>
-                <TextInput
-                  style={[
-                    styles.proximityInput,
-                    isDarkMode && styles.proximityInputDark
-                  ]}
-                  keyboardType="numeric"
-                  value={filterSettings.proximity.toString()}
-                  onChangeText={(text) => setFilterSettings(prev => ({
-                    ...prev,
-                    proximity: parseInt(text) || 10
-                  }))}
-                />
-                <Text style={[
-                  styles.proximityLabel,
-                  isDarkMode && styles.proximityLabelDark
-                ]}>
-                  km
-                </Text>
-              </View>
-            </View>
-            
-            <View style={styles.filterButtons}>
-              <TouchableOpacity 
-                style={styles.resetButton} 
-                onPress={() => setFilterSettings({
-                  category: 'all',
-                  saved: false,
-                  language: 'All',
-                  denomination: 'All',
-                  proximity: 10
-                })}
-              >
-                <Text style={styles.buttonText}>Reset</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.applyButton} 
-                onPress={() => setShowFilterModal(false)}
-              >
-                <Text style={styles.buttonText}>Apply</Text>
-              </TouchableOpacity>
-            </View>
+        <View style={[
+          styles.fullScreenModalContainer,
+          isDarkMode && styles.fullScreenModalContainerDark
+        ]}>
+          <View style={styles.modalHeader}>
+            <Text style={[
+              styles.modalTitle,
+              isDarkMode && styles.modalTitleDark
+            ]}>Filter Events</Text>
+            <TouchableOpacity onPress={() => setShowFilterModal(false)}>
+              <Text style={styles.modalCloseButton}>Close</Text>
+            </TouchableOpacity>
           </View>
+          
+          <FlatList
+            data={[1]} // Dummy data to render once
+            keyExtractor={() => "filters"}
+            renderItem={() => (
+              <>
+                <View style={styles.filterSection}>
+                  <Text style={[
+                    styles.filterSectionTitle,
+                    isDarkMode && styles.filterSectionTitleDark
+                  ]}>Event Type</Text>
+                  
+                  <View style={styles.filterChipsContainer}>
+                    {eventCategories.map((category) => (
+                      <TouchableOpacity
+                        key={category.id}
+                        style={[
+                          styles.filterChip,
+                          filterSettings.category === category.id && styles.filterChipSelected
+                        ]}
+                        onPress={() => setFilterSettings(prev => ({
+                          ...prev,
+                          category: category.id,
+                          saved: false // Unselect saved when selecting a category
+                        }))}
+                      >
+                        <Text style={[
+                          styles.filterChipText,
+                          isDarkMode && styles.filterChipTextDark,
+                          filterSettings.category === category.id && styles.filterChipTextSelected
+                        ]}>
+                          {category.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+                
+                <View style={styles.filterSection}>
+                  <Text style={[
+                    styles.filterSectionTitle,
+                    isDarkMode && styles.filterSectionTitleDark
+                  ]}>Saved Events</Text>
+                  
+                  <TouchableOpacity
+                    style={[
+                      styles.savedFilterButton,
+                      filterSettings.saved && styles.savedFilterButtonSelected
+                    ]}
+                    onPress={() => setFilterSettings(prev => ({
+                      ...prev,
+                      saved: !prev.saved,
+                      category: 'all' // Reset category when toggling saved
+                    }))}
+                  >
+                    <Text style={[
+                      styles.savedFilterButtonText,
+                      isDarkMode && styles.savedFilterButtonTextDark,
+                      filterSettings.saved && styles.savedFilterButtonTextSelected
+                    ]}>
+                      Show only saved events
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                
+                <View style={styles.filterSection}>
+                  <Text style={[
+                    styles.filterSectionTitle,
+                    isDarkMode && styles.filterSectionTitleDark
+                  ]}>Language</Text>
+                  
+                  <View style={styles.filterChipsContainer}>
+                    {languages.map((language) => (
+                      <TouchableOpacity
+                        key={language}
+                        style={[
+                          styles.filterChip,
+                          filterSettings.language === language && styles.filterChipSelected
+                        ]}
+                        onPress={() => setFilterSettings(prev => ({
+                          ...prev,
+                          language
+                        }))}
+                      >
+                        <Text style={[
+                          styles.filterChipText,
+                          isDarkMode && styles.filterChipTextDark,
+                          filterSettings.language === language && styles.filterChipTextSelected
+                        ]}>
+                          {language}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+                
+                <View style={styles.filterSection}>
+                  <Text style={[
+                    styles.filterSectionTitle,
+                    isDarkMode && styles.filterSectionTitleDark
+                  ]}>Denomination</Text>
+                  
+                  <View style={styles.filterChipsContainer}>
+                    {denominations.map((denomination) => (
+                      <TouchableOpacity
+                        key={denomination}
+                        style={[
+                          styles.filterChip,
+                          filterSettings.denomination === denomination && styles.filterChipSelected
+                        ]}
+                        onPress={() => setFilterSettings(prev => ({
+                          ...prev,
+                          denomination
+                        }))}
+                      >
+                        <Text style={[
+                          styles.filterChipText,
+                          isDarkMode && styles.filterChipTextDark,
+                          filterSettings.denomination === denomination && styles.filterChipTextSelected
+                        ]}>
+                          {denomination}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+                
+                <View style={styles.filterSection}>
+                  <Text style={[
+                    styles.filterSectionTitle,
+                    isDarkMode && styles.filterSectionTitleDark
+                  ]}>Proximity (km)</Text>
+                  
+                  <View style={styles.proximityContainer}>
+                    <TextInput
+                      style={[
+                        styles.proximityInput,
+                        isDarkMode && styles.proximityInputDark
+                      ]}
+                      keyboardType="numeric"
+                      value={filterSettings.proximity.toString()}
+                      onChangeText={(text) => setFilterSettings(prev => ({
+                        ...prev,
+                        proximity: parseInt(text) || 10
+                      }))}
+                    />
+                    <Text style={[
+                      styles.proximityLabel,
+                      isDarkMode && styles.proximityLabelDark
+                    ]}>
+                      km
+                    </Text>
+                  </View>
+                </View>
+              </>
+            )}
+            ListFooterComponent={
+              <View style={styles.filterButtons}>
+                <TouchableOpacity 
+                  style={styles.resetButton} 
+                  onPress={() => setFilterSettings({
+                    category: 'all',
+                    saved: false,
+                    language: 'All',
+                    denomination: 'All',
+                    proximity: 10
+                  })}
+                >
+                  <Text style={styles.buttonText}>Reset</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.applyButton} 
+                  onPress={() => setShowFilterModal(false)}
+                >
+                  <Text style={styles.buttonText}>Apply</Text>
+                </TouchableOpacity>
+              </View>
+            }
+          />
         </View>
       </Modal>
 
@@ -841,6 +847,13 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: Colors.primary,
   },
+  fullScreenModalContainer: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  fullScreenModalContainerDark: {
+    backgroundColor: '#121212',
+  },
   filterSection: {
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -932,7 +945,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingVertical: 16,
+    marginBottom: 30,
   },
   resetButton: {
     flex: 1,

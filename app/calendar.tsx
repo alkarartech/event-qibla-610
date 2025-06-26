@@ -471,7 +471,7 @@ ${hijriDate.year} Hijri`;
         </View>
         
         {/* Events for selected date in month view */}
-        <View style={styles.monthViewEventsContainer}>
+        <ScrollView style={styles.monthViewEventsContainer}>
           <Text style={[
             styles.monthViewEventsTitle,
             isDarkMode && styles.monthViewEventsTitleDark
@@ -524,6 +524,7 @@ ${hijriDate.year} Hijri`;
                   <Clock size={16} color={Colors.primary} />
                   <Text style={styles.eventTime}>
                     {formatTime(event.time, use24HourFormat)}
+                    {event.endTime && ` - ${formatTime(event.endTime, use24HourFormat)}`}
                   </Text>
                 </View>
                 
@@ -557,7 +558,7 @@ ${hijriDate.year} Hijri`;
               No events scheduled for this day
             </Text>
           )}
-        </View>
+        </ScrollView>
       </View>
     );
   };
@@ -1394,6 +1395,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   monthViewEventsContainer: {
+    flex: 1,
     padding: 16,
     borderTopWidth: 1,
     borderTopColor: Colors.border,

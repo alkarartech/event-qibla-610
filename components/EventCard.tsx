@@ -29,7 +29,12 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
     if (isSaved) {
       unsaveEvent(event.id);
     } else {
-      saveEvent(event.id);
+      saveEvent(event.id).then(success => {
+        if (success && !hasNotifications) {
+          // Show notification modal by navigating to event details
+          router.push(`/event/${event.id}`);
+        }
+      });
     }
   };
   

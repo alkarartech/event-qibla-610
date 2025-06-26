@@ -68,6 +68,8 @@ export default function useEvents(
         shouldShowAlert: true,
         shouldPlaySound: true,
         shouldSetBadge: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
       }),
     });
   };
@@ -233,7 +235,9 @@ export default function useEvents(
             body: `Don't forget: ${event.title} at ${event.mosque_name} tomorrow at ${event.time}`,
             data: { eventId },
           },
-          trigger: dayBeforeDate,
+          trigger: {
+            date: dayBeforeDate,
+          },
         });
         notificationIds.push(dayBeforeId);
       }
@@ -245,7 +249,9 @@ export default function useEvents(
             body: `Reminder: ${event.title} at ${event.mosque_name} starts in 2 hours`,
             data: { eventId },
           },
-          trigger: twoHoursBeforeDate,
+          trigger: {
+            date: twoHoursBeforeDate,
+          },
         });
         notificationIds.push(twoHoursBeforeId);
       }

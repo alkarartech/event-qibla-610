@@ -95,13 +95,31 @@ export default function EventDetailScreen() {
   const handleSharePress = async () => {
     if (event) {
       try {
-        // Check if Web Share API is available (for web)
-        if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.share) {
-          await navigator.share({
-            title: event.title,
-            text: `Check out this event: ${event.title} at ${event.mosque_name} on ${event.date} at ${event.time}`,
-            url: window.location.href,
-          });
+        // For web, we need to handle sharing differently
+        if (Platform.OS === 'web') {
+          // Create a fallback for browsers that don't support the Web Share API
+          const textArea = document.createElement('textarea');
+          textArea.value = `Check out this event: ${event.title} at ${event.mosque_name} on ${event.date} at ${event.time}`;
+          document.body.appendChild(textArea);
+          textArea.focus();
+          textArea.select();
+          
+          try {
+            document.execCommand('copy');
+            Alert.alert(
+              "Link Copied",
+              "Event details copied to clipboard. You can now share it manually.",
+              [{ text: "OK" }]
+            );
+          } catch (err) {
+            Alert.alert(
+              "Sharing Failed",
+              "Unable to copy event details. Please try again later.",
+              [{ text: "OK" }]
+            );
+          }
+          
+          document.body.removeChild(textArea);
           return;
         }
         
@@ -527,8 +545,10 @@ Feedback: ${feedback}`;
               isDarkMode && styles.notificationModalSubtextDark
             ]}>
               You'll be notified:
-              {"\n"}• One day before the event
-              {"\n"}• Two hours before the event starts
+              {"
+"}• One day before the event
+              {"
+"}• Two hours before the event starts
             </Text>
             
             <View style={styles.modalButtons}>
