@@ -22,14 +22,14 @@ export default function HomeScreen() {
   const { isDarkMode, use24HourFormat } = useThemeStore();
   
   const { nearbyMosques, loading: mosquesLoading } = useMosques(
-    location?.coords.latitude,
-    location?.coords.longitude,
+    location?.coords?.latitude,
+    location?.coords?.longitude,
     10
   );
   
   const { nearbyEvents, savedEvents, loading: eventsLoading, refreshSavedEvents } = useEvents(
-    location?.coords.latitude,
-    location?.coords.longitude,
+    location?.coords?.latitude,
+    location?.coords?.longitude,
     10
   );
 
@@ -75,11 +75,8 @@ export default function HomeScreen() {
   };
 
   const handleSeeAllEvents = () => {
-    // Navigate to the events screen with a filter for saved events
-    router.push({
-      pathname: '/events',
-      params: { filter: 'saved' }
-    });
+    // Navigate to the saved events screen instead of events tab
+    router.push('/saved-events');
   };
 
   return (

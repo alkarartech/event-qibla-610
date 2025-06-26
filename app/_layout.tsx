@@ -72,6 +72,13 @@ function RootLayoutNav() {
             animation: "slide_from_right",
           }} 
         />
+        <Stack.Screen 
+          name="saved-events" 
+          options={{ 
+            title: "Saved Events",
+            animation: "slide_from_right",
+          }} 
+        />
       </Stack>
     </>
   );

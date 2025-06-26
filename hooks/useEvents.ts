@@ -122,7 +122,7 @@ export default function useEvents(
   const saveEvent = async (eventId: string) => {
     try {
       const event = events.find(e => e.id === eventId);
-      if (!event) return;
+      if (!event) return false;
 
       const savedEventIds = await AsyncStorage.getItem('savedEvents');
       let ids: string[] = savedEventIds ? JSON.parse(savedEventIds) : [];
@@ -235,9 +235,7 @@ export default function useEvents(
             body: `Don't forget: ${event.title} at ${event.mosque_name} tomorrow at ${event.time}`,
             data: { eventId },
           },
-          trigger: {
-            date: dayBeforeDate,
-          },
+          trigger: dayBeforeDate,
         });
         notificationIds.push(dayBeforeId);
       }
@@ -249,9 +247,7 @@ export default function useEvents(
             body: `Reminder: ${event.title} at ${event.mosque_name} starts in 2 hours`,
             data: { eventId },
           },
-          trigger: {
-            date: twoHoursBeforeDate,
-          },
+          trigger: twoHoursBeforeDate,
         });
         notificationIds.push(twoHoursBeforeId);
       }

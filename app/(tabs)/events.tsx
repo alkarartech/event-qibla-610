@@ -51,14 +51,14 @@ export default function EventsScreen() {
   const params = useLocalSearchParams();
   const { location, locationName, loading: locationLoading } = useLocation();
   const { allEvents, nearbyEvents, savedEvents, loading: eventsLoading, refreshSavedEvents } = useEvents(
-    location?.coords.latitude,
-    location?.coords.longitude,
+    location?.coords?.latitude,
+    location?.coords?.longitude,
     10
   );
   const { isDarkMode } = useThemeStore();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredEvents, setFilteredEvents] = useState(allEvents);
+  const [filteredEvents, setFilteredEvents] = useState<any[]>([]);
   const [selectedTimeFilter, setSelectedTimeFilter] = useState('anytime');
   const [customLocation, setCustomLocation] = useState('');
   const [showTimeFilterModal, setShowTimeFilterModal] = useState(false);
@@ -86,7 +86,7 @@ export default function EventsScreen() {
         saved: true
       }));
     }
-  }, [params]);
+  }, [params.filter]);
 
   useEffect(() => {
     let events = allEvents;

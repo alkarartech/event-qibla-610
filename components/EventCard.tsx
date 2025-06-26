@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Calendar, Clock, MapPin, Heart, Bell, BellOff } from 'lucide-react-native';
 import Colors from '@/constants/colors';
@@ -29,21 +29,38 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
     if (isSaved) {
       unsaveEvent(event.id);
     } else {
-      saveEvent(event.id).then(success => {
-        if (success && !hasNotifications) {
-          // Show notification modal by navigating to event details
-          router.push(`/event/${event.id}`);
-        }
-      });
+      saveEvent(event.id);
     }
   };
   
   const handleNotificationToggle = (e: any) => {
     e.stopPropagation();
+    
     if (hasNotifications) {
-      cancelEventNotifications(event.id);
+      Alert.alert(
+        "Turn Off Notifications",
+        "Are you sure you want to turn off notifications for this event?",
+        [
+          { text: "Cancel", style: "cancel" },
+          { 
+            text: "Turn Off", 
+            style: "destructive",
+            onPress: () => cancelEventNotifications(event.id)
+          }
+        ]
+      );
     } else {
-      scheduleEventNotifications(event.id);
+      Alert.alert(
+        "Turn On Notifications",
+        "Would you like to receive notifications for this event?\n\nYou'll be notified:\n• One day before the event\n• Two hours before the event starts",
+        [
+          { text: "Cancel", style: "cancel" },
+          { 
+            text: "Turn On", 
+            onPress: () => scheduleEventNotifications(event.id)
+          }
+        ]
+      );
     }
   };
 

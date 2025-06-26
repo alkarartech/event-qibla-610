@@ -33,6 +33,7 @@ export default function EventDetailScreen() {
   const [hasNotifications, setHasNotifications] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [showNotificationConfirmModal, setShowNotificationConfirmModal] = useState(false);
   const [rating, setRating] = useState(5);
   const [feedback, setFeedback] = useState('');
   const [hasAttended, setHasAttended] = useState(false);
@@ -169,17 +170,29 @@ Download the Mosque Finder app to see more events: ${appUrl}`;
     if (!event) return;
     
     if (hasNotifications) {
+      setShowNotificationConfirmModal(true);
+    } else {
+      setShowNotificationConfirmModal(true);
+    }
+  };
+  
+  const confirmNotificationToggle = async (enable: boolean) => {
+    if (!event) return;
+    
+    if (!enable && hasNotifications) {
       const success = await cancelEventNotifications(event.id);
       if (success) {
         setHasNotifications(false);
       }
-    } else {
+    } else if (enable && !hasNotifications) {
       const success = await scheduleEventNotifications(event.id);
       if (success) {
         setHasNotifications(true);
         setShowNotificationModal(false);
       }
     }
+    
+    setShowNotificationConfirmModal(false);
   };
   
   const handleRateEvent = () => {
@@ -557,9 +570,70 @@ Feedback: ${feedback}`;
               
               <TouchableOpacity
                 style={styles.submitButton}
-                onPress={handleNotificationToggle}
+                onPress={() => {
+                  setShowNotificationModal(false);
+                  confirmNotificationToggle(true);
+                }}
               >
                 <Text style={styles.submitButtonText}>Enable</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Notification Confirmation Modal */}
+      <Modal
+        visible={showNotificationConfirmModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowNotificationConfirmModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[
+            styles.notificationModalContent,
+            isDarkMode && styles.notificationModalContentDark
+          ]}>
+            <Text style={[
+              styles.notificationModalTitle,
+              isDarkMode && styles.notificationModalTitleDark
+            ]}>
+              {hasNotifications ? "Turn Off Notifications?" : "Turn On Notifications?"}
+            </Text>
+            
+            <Text style={[
+              styles.notificationModalText,
+              isDarkMode && styles.notificationModalTextDark
+            ]}>
+              {hasNotifications 
+                ? "Are you sure you want to turn off notifications for this event?" 
+                : "Would you like to receive notifications for this event?"}
+            </Text>
+            
+            {!hasNotifications && (
+              <Text style={[
+                styles.notificationModalSubtext,
+                isDarkMode && styles.notificationModalSubtextDark
+              ]}>
+                {"You'll be notified:\n• One day before the event\n• Two hours before the event starts"}
+              </Text>
+            )}
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setShowNotificationConfirmModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.submitButton}
+                onPress={() => confirmNotificationToggle(!hasNotifications)}
+              >
+                <Text style={styles.submitButtonText}>
+                  {hasNotifications ? "Turn Off" : "Turn On"}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
