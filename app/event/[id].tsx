@@ -544,11 +544,7 @@ Feedback: ${feedback}`;
               styles.notificationModalSubtext,
               isDarkMode && styles.notificationModalSubtextDark
             ]}>
-              You'll be notified:
-              {"
-"}• One day before the event
-              {"
-"}• Two hours before the event starts
+              {"You'll be notified:\n• One day before the event\n• Two hours before the event starts"}
             </Text>
             
             <View style={styles.modalButtons}>
