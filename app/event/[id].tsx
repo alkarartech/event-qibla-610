@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, Image, Share, Platform, Modal, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, Image, Share, Platform, Modal, TextInput, Alert, RefreshControl } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useRouter } from 'expo-router';
-import { MapPin, Calendar, Clock, User, Phone, Share2, Heart, Star, Mail } from 'lucide-react-native';
+import { MapPin, Calendar, Clock, User, Phone, Share2, Heart, Star, Mail, Bell, BellOff } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { globalStyles } from '@/constants/theme';
 import LoadingIndicator from '@/components/LoadingIndicator';
@@ -13,20 +13,41 @@ import useThemeStore from '@/hooks/useThemeStore';
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const { getEventById, saveEvent, unsaveEvent, isEventSaved, loading, rateEvent } = useEvents();
+  const { 
+    getEventById, 
+    saveEvent, 
+    unsaveEvent, 
+    isEventSaved, 
+    loading, 
+    rateEvent, 
+    getEventRating,
+    scheduleEventNotifications,
+    cancelEventNotifications,
+    hasEventNotifications,
+    refreshSavedEvents
+  } = useEvents();
   const { isDarkMode, use24HourFormat } = useThemeStore();
 
   const event = getEventById(id as string);
-  const saved = event ? isEventSaved(event.id) : false;
-  
+  const [saved, setSaved] = useState(false);
+  const [hasNotifications, setHasNotifications] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [rating, setRating] = useState(5);
   const [feedback, setFeedback] = useState('');
   const [hasAttended, setHasAttended] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   
-  // Check if event date has passed to determine if user can rate it
+  // Check if event is saved and has notifications
   useEffect(() => {
     if (event) {
+      const isSaved = isEventSaved(event.id);
+      setSaved(isSaved);
+      
+      const hasNotifs = hasEventNotifications(event.id);
+      setHasNotifications(hasNotifs);
+      
+      // Check if event date has passed to determine if user can rate it
       const eventDate = new Date(event.date);
       const today = new Date();
       
@@ -35,7 +56,18 @@ export default function EventDetailScreen() {
         setHasAttended(true);
       }
     }
-  }, [event]);
+  }, [event, isEventSaved, hasEventNotifications]);
+  
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    refreshSavedEvents().then(() => {
+      if (event) {
+        setSaved(isEventSaved(event.id));
+        setHasNotifications(hasEventNotifications(event.id));
+      }
+      setRefreshing(false);
+    });
+  }, [refreshSavedEvents, event]);
 
   const handleMosquePress = () => {
     if (event) {
@@ -97,13 +129,38 @@ Download the Mosque Finder app to see more events: ${appUrl}`;
     }
   };
 
-  const handleSaveToggle = () => {
+  const handleSaveToggle = async () => {
     if (!event) return;
     
     if (saved) {
-      unsaveEvent(event.id);
+      const success = await unsaveEvent(event.id);
+      if (success) {
+        setSaved(false);
+        setHasNotifications(false);
+      }
     } else {
-      saveEvent(event.id);
+      const success = await saveEvent(event.id);
+      if (success) {
+        setSaved(true);
+        setShowNotificationModal(true);
+      }
+    }
+  };
+  
+  const handleNotificationToggle = async () => {
+    if (!event) return;
+    
+    if (hasNotifications) {
+      const success = await cancelEventNotifications(event.id);
+      if (success) {
+        setHasNotifications(false);
+      }
+    } else {
+      const success = await scheduleEventNotifications(event.id);
+      if (success) {
+        setHasNotifications(true);
+        setShowNotificationModal(false);
+      }
     }
   };
   
@@ -198,6 +255,14 @@ Feedback: ${feedback}`;
         isDarkMode && styles.containerDark
       ]} 
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={[Colors.primary]}
+          tintColor={isDarkMode ? Colors.white : Colors.primary}
+        />
+      }
     >
       {event.image && (
         <Image 
@@ -234,7 +299,7 @@ Feedback: ${feedback}`;
             <Text style={[
               styles.detailText,
               isDarkMode && styles.detailTextDark
-            ]}>{formatTime(event.time)}</Text>
+            ]}>{formatTime(event.time)}{event.endTime && ` - ${formatTime(event.endTime)}`}</Text>
           </View>
           
           <TouchableOpacity style={styles.detailRow} onPress={handleMosquePress}>
@@ -311,6 +376,29 @@ Feedback: ${feedback}`;
               <Text style={styles.actionButtonOutlineText}>Share</Text>
             </TouchableOpacity>
           </View>
+          
+          {saved && (
+            <TouchableOpacity 
+              style={[
+                styles.notificationButton, 
+                hasNotifications ? styles.notificationButtonActive : {},
+                globalStyles.shadow
+              ]} 
+              onPress={handleNotificationToggle}
+            >
+              {hasNotifications ? (
+                <>
+                  <Bell size={20} color={Colors.white} style={styles.actionButtonIcon} />
+                  <Text style={styles.notificationButtonText}>Notifications On</Text>
+                </>
+              ) : (
+                <>
+                  <BellOff size={20} color={Colors.white} style={styles.actionButtonIcon} />
+                  <Text style={styles.notificationButtonText}>Notifications Off</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
           
           {hasAttended && (
             <TouchableOpacity 
@@ -403,6 +491,60 @@ Feedback: ${feedback}`;
               ]}>
                 Your feedback will be sent to the mosque
               </Text>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      
+      {/* Notification Modal */}
+      <Modal
+        visible={showNotificationModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowNotificationModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[
+            styles.notificationModalContent,
+            isDarkMode && styles.notificationModalContentDark
+          ]}>
+            <Text style={[
+              styles.notificationModalTitle,
+              isDarkMode && styles.notificationModalTitleDark
+            ]}>
+              Event Notifications
+            </Text>
+            
+            <Text style={[
+              styles.notificationModalText,
+              isDarkMode && styles.notificationModalTextDark
+            ]}>
+              Would you like to receive notifications for this event?
+            </Text>
+            
+            <Text style={[
+              styles.notificationModalSubtext,
+              isDarkMode && styles.notificationModalSubtextDark
+            ]}>
+              You'll be notified:
+              {"\n"}• One day before the event
+              {"\n"}• Two hours before the event starts
+            </Text>
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setShowNotificationModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>No Thanks</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.submitButton}
+                onPress={handleNotificationToggle}
+              >
+                <Text style={styles.submitButtonText}>Enable</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -529,6 +671,22 @@ const styles = StyleSheet.create({
   actionButtonIcon: {
     marginRight: 8,
   },
+  notificationButton: {
+    backgroundColor: '#2196F3',
+    paddingVertical: 12,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notificationButtonActive: {
+    backgroundColor: '#4CAF50',
+  },
+  notificationButtonText: {
+    color: Colors.white,
+    fontSize: 16,
+    fontWeight: '600',
+  },
   rateButton: {
     backgroundColor: '#FF9800',
     paddingVertical: 12,
@@ -644,5 +802,43 @@ const styles = StyleSheet.create({
   },
   emailInfoTextDark: {
     color: '#AAA',
+  },
+  notificationModalContent: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 24,
+    width: '85%',
+    ...globalStyles.shadow,
+  },
+  notificationModalContentDark: {
+    backgroundColor: '#1E1E1E',
+  },
+  notificationModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.text,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  notificationModalTitleDark: {
+    color: Colors.white,
+  },
+  notificationModalText: {
+    fontSize: 16,
+    color: Colors.text,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  notificationModalTextDark: {
+    color: Colors.white,
+  },
+  notificationModalSubtext: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  notificationModalSubtextDark: {
+    color: '#AAAAAA',
   },
 });

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, Modal, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, Modal, Platform, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, MapPin, X } from 'lucide-react-native';
 import Colors from '@/constants/colors';
@@ -82,10 +82,18 @@ export default function CalendarScreen() {
   const [showEventDetails, setShowEventDetails] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [lastClickTime, setLastClickTime] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
   
   // Refresh saved events when component mounts
   useEffect(() => {
     refreshSavedEvents();
+  }, [refreshSavedEvents]);
+  
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    refreshSavedEvents().then(() => {
+      setRefreshing(false);
+    });
   }, [refreshSavedEvents]);
   
   // Get events for the selected date
@@ -265,6 +273,65 @@ ${hijriDate.year} Hijri`;
     return months;
   };
   
+  // Parse time string to get hours and minutes
+  const parseTimeString = (timeString: string) => {
+    let hours = 0;
+    let minutes = 0;
+    
+    if (timeString.includes(':')) {
+      const [hourStr, minuteStr] = timeString.split(':');
+      hours = parseInt(hourStr, 10);
+      
+      // Handle minutes and AM/PM if present
+      if (minuteStr.includes('AM') || minuteStr.includes('PM')) {
+        const [mins, period] = minuteStr.split(' ');
+        minutes = parseInt(mins, 10);
+        
+        // Convert to 24-hour format if needed
+        if (period === 'PM' && hours < 12) {
+          hours += 12;
+        } else if (period === 'AM' && hours === 12) {
+          hours = 0;
+        }
+      } else {
+        minutes = parseInt(minuteStr, 10);
+      }
+    } else if (timeString.includes('AM') || timeString.includes('PM')) {
+      const [timeValue, period] = timeString.split(' ');
+      hours = parseInt(timeValue, 10);
+      
+      // Convert to 24-hour format
+      if (period === 'PM' && hours < 12) {
+        hours += 12;
+      } else if (period === 'AM' && hours === 12) {
+        hours = 0;
+      }
+    }
+    
+    return { hours, minutes };
+  };
+  
+  // Calculate event duration in hours (default to 1 hour if not specified)
+  const getEventDuration = (event: Event) => {
+    if (event.endTime) {
+      const startTime = parseTimeString(event.time);
+      const endTime = parseTimeString(event.endTime);
+      
+      // Calculate duration in hours
+      let durationHours = endTime.hours - startTime.hours;
+      let durationMinutes = endTime.minutes - startTime.minutes;
+      
+      if (durationMinutes < 0) {
+        durationHours -= 1;
+        durationMinutes += 60;
+      }
+      
+      return durationHours + (durationMinutes / 60);
+    }
+    
+    return 1; // Default duration: 1 hour
+  };
+  
   // Generate hours for the day view
   const generateDayHours = () => {
     const hours = [];
@@ -278,9 +345,8 @@ ${hijriDate.year} Hijri`;
       
       // Check if there are events during this hour
       const eventsThisHour = eventsForSelectedDate.filter(event => {
-        const eventTime = event.time;
-        const eventHour = parseInt(eventTime.split(':')[0]);
-        return eventHour === i;
+        const eventTime = parseTimeString(event.time);
+        return eventTime.hours === i;
       });
       
       hours.push({ 
@@ -543,9 +609,21 @@ ${hijriDate.year} Hijri`;
   // Render day view
   const renderDayView = () => {
     const hours = generateDayHours();
+    const hijriDate = gregorianToHijri(selectedDate);
     
     return (
-      <ScrollView style={styles.dayContainer}>
+      <ScrollView 
+        style={styles.dayContainer}
+        showsVerticalScrollIndicator={true}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[Colors.primary]}
+            tintColor={isDarkMode ? Colors.white : Colors.primary}
+          />
+        }
+      >
         <Text style={[
           styles.dayViewDate,
           isDarkMode && styles.dayViewDateDark
@@ -562,7 +640,7 @@ ${hijriDate.year} Hijri`;
           styles.hijriDateText,
           isDarkMode && styles.hijriDateTextDark
         ]}>
-          {hijriMonthNames[selectedHijriDate.month - 1]} {selectedHijriDate.day}, {selectedHijriDate.year} Hijri
+          {hijriMonthNames[hijriDate.month - 1]} {hijriDate.day}, {hijriDate.year} Hijri
         </Text>
         
         {islamicEventsForSelectedDate.length > 0 && (
@@ -609,6 +687,7 @@ ${hijriDate.year} Hijri`;
                   <Clock size={16} color={Colors.primary} />
                   <Text style={styles.eventTime}>
                     {formatTime(event.time, use24HourFormat)}
+                    {event.endTime && ` - ${formatTime(event.endTime, use24HourFormat)}`}
                   </Text>
                 </View>
                 
@@ -657,21 +736,49 @@ ${hijriDate.year} Hijri`;
                 styles.timelineLine,
                 isDarkMode && styles.timelineLineDark
               ]}>
-                {hour.events.length > 0 && (
-                  <View style={styles.timelineEvent}>
-                    {hour.events.map(event => (
+                {/* Render all events that overlap with this hour */}
+                {eventsForSelectedDate.map(event => {
+                  const eventTime = parseTimeString(event.time);
+                  const duration = getEventDuration(event);
+                  
+                  // Check if this event overlaps with the current hour
+                  if (eventTime.hours <= hour.hour && 
+                      (eventTime.hours + duration) > hour.hour) {
+                    
+                    // Calculate position and height
+                    const startOffset = eventTime.hours === hour.hour ? 
+                      (eventTime.minutes / 60) * 100 : 0;
+                    
+                    const endHour = eventTime.hours + duration;
+                    const endMinutes = (endHour % 1) * 60;
+                    const endOffset = hour.hour + 1 >= endHour ? 
+                      (endMinutes / 60) * 100 : 100;
+                    
+                    const height = hour.hour + 1 <= endHour ? 
+                      100 - startOffset : endOffset - startOffset;
+                    
+                    return (
                       <TouchableOpacity
-                        key={event.id}
-                        style={styles.timelineEventBlock}
+                        key={`${event.id}-${hour.hour}`}
+                        style={[
+                          styles.timelineEventBlock,
+                          {
+                            top: `${startOffset}%`,
+                            height: `${height}%`,
+                            backgroundColor: Colors.primary,
+                            opacity: 0.9
+                          }
+                        ]}
                         onPress={() => handleEventPress(event)}
                       >
                         <Text style={styles.timelineEventText} numberOfLines={1}>
                           {event.title}
                         </Text>
                       </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
+                    );
+                  }
+                  return null;
+                })}
               </View>
             </View>
           ))}
@@ -824,6 +931,7 @@ ${hijriDate.year} Hijri`;
                     isDarkMode && styles.eventModalDetailTextDark
                   ]}>
                     {selectedEvent.date} • {formatTime(selectedEvent.time, use24HourFormat)}
+                    {selectedEvent.endTime && ` - ${formatTime(selectedEvent.endTime, use24HourFormat)}`}
                   </Text>
                 </View>
                 
@@ -1170,11 +1278,13 @@ const styles = StyleSheet.create({
   },
   timelineContainer: {
     marginTop: 24,
+    paddingBottom: 50,
   },
   timelineHour: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 16,
+    height: 60,
   },
   timelineHourText: {
     width: 80,
@@ -1186,26 +1296,21 @@ const styles = StyleSheet.create({
   },
   timelineLine: {
     flex: 1,
-    height: 30,
+    height: 60,
     backgroundColor: Colors.border,
     position: 'relative',
   },
   timelineLineDark: {
     backgroundColor: '#333333',
   },
-  timelineEvent: {
+  timelineEventBlock: {
     position: 'absolute',
-    top: 0,
     left: 0,
     right: 0,
-    bottom: 0,
-  },
-  timelineEventBlock: {
-    backgroundColor: Colors.primary,
     borderRadius: 4,
     padding: 4,
     margin: 2,
-    flex: 1,
+    overflow: 'hidden',
   },
   timelineEventText: {
     color: Colors.white,

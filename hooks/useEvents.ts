@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { events, Event } from '@/mocks/events';
 import { calculateDistance } from '@/utils/location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
 
 interface EventsState {
   allEvents: Event[];
@@ -18,6 +20,11 @@ interface EventRating {
   date: string;
 }
 
+interface EventNotification {
+  eventId: string;
+  notificationIds: string[];
+}
+
 export default function useEvents(
   latitude?: number,
   longitude?: number,
@@ -32,12 +39,38 @@ export default function useEvents(
   });
   
   const [eventRatings, setEventRatings] = useState<EventRating[]>([]);
+  const [eventNotifications, setEventNotifications] = useState<EventNotification[]>([]);
 
   // Load saved events on mount
   useEffect(() => {
     loadSavedEvents();
     loadEventRatings();
+    loadEventNotifications();
+    
+    // Set up notification handler
+    if (Platform.OS !== 'web') {
+      setupNotifications();
+    }
   }, []);
+  
+  // Setup notifications
+  const setupNotifications = async () => {
+    // Request permissions
+    const { status } = await Notifications.requestPermissionsAsync();
+    if (status !== 'granted') {
+      console.log('Notification permissions not granted');
+      return;
+    }
+    
+    // Set notification handler
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+      }),
+    });
+  };
 
   // Load saved events from AsyncStorage
   const loadSavedEvents = useCallback(async () => {
@@ -52,8 +85,10 @@ export default function useEvents(
           savedEvents,
         }));
       }
+      return true;
     } catch (error) {
       console.error('Error loading saved events:', error);
+      return false;
     }
   }, []);
   
@@ -66,6 +101,18 @@ export default function useEvents(
       }
     } catch (error) {
       console.error('Error loading event ratings:', error);
+    }
+  };
+  
+  // Load event notifications from AsyncStorage
+  const loadEventNotifications = async () => {
+    try {
+      const notificationsData = await AsyncStorage.getItem('eventNotifications');
+      if (notificationsData) {
+        setEventNotifications(JSON.parse(notificationsData));
+      }
+    } catch (error) {
+      console.error('Error loading event notifications:', error);
     }
   };
 
@@ -86,9 +133,13 @@ export default function useEvents(
           ...prev,
           savedEvents: [...prev.savedEvents, event],
         }));
+        
+        return true;
       }
+      return false;
     } catch (error) {
       console.error('Error saving event:', error);
+      return false;
     }
   };
 
@@ -96,7 +147,7 @@ export default function useEvents(
   const unsaveEvent = async (eventId: string) => {
     try {
       const savedEventIds = await AsyncStorage.getItem('savedEvents');
-      if (!savedEventIds) return;
+      if (!savedEventIds) return false;
       
       let ids: string[] = JSON.parse(savedEventIds);
       ids = ids.filter(id => id !== eventId);
@@ -107,14 +158,148 @@ export default function useEvents(
         ...prev,
         savedEvents: prev.savedEvents.filter(event => event.id !== eventId),
       }));
+      
+      // Cancel notifications for this event
+      await cancelEventNotifications(eventId);
+      
+      return true;
     } catch (error) {
       console.error('Error unsaving event:', error);
+      return false;
     }
   };
 
   // Check if an event is saved
   const isEventSaved = (eventId: string): boolean => {
     return state.savedEvents.some(event => event.id === eventId);
+  };
+  
+  // Schedule notifications for an event
+  const scheduleEventNotifications = async (eventId: string) => {
+    if (Platform.OS === 'web') {
+      console.log('Notifications not supported on web');
+      return false;
+    }
+    
+    try {
+      const event = events.find(e => e.id === eventId);
+      if (!event) return false;
+      
+      const eventDate = new Date(event.date);
+      const eventTime = event.time;
+      
+      // Parse time (assuming format like "7:00 PM" or "19:00")
+      let hours = 0;
+      let minutes = 0;
+      
+      if (eventTime.includes(':')) {
+        const [hourStr, minuteStr] = eventTime.split(':');
+        hours = parseInt(hourStr, 10);
+        
+        if (minuteStr.includes('PM') || minuteStr.includes('AM')) {
+          const [mins, period] = minuteStr.split(' ');
+          minutes = parseInt(mins, 10);
+          
+          if (period === 'PM' && hours < 12) {
+            hours += 12;
+          } else if (period === 'AM' && hours === 12) {
+            hours = 0;
+          }
+        } else {
+          minutes = parseInt(minuteStr, 10);
+        }
+      }
+      
+      // Set event time
+      eventDate.setHours(hours, minutes, 0);
+      
+      // Create notification for day before
+      const dayBeforeDate = new Date(eventDate);
+      dayBeforeDate.setDate(dayBeforeDate.getDate() - 1);
+      dayBeforeDate.setHours(12, 0, 0); // Noon the day before
+      
+      // Create notification for 2 hours before
+      const twoHoursBeforeDate = new Date(eventDate);
+      twoHoursBeforeDate.setHours(twoHoursBeforeDate.getHours() - 2);
+      
+      // Only schedule if the dates are in the future
+      const now = new Date();
+      const notificationIds = [];
+      
+      if (dayBeforeDate > now) {
+        const dayBeforeId = await Notifications.scheduleNotificationAsync({
+          content: {
+            title: 'Event Tomorrow',
+            body: `Don't forget: ${event.title} at ${event.mosque_name} tomorrow at ${event.time}`,
+            data: { eventId },
+          },
+          trigger: dayBeforeDate,
+        });
+        notificationIds.push(dayBeforeId);
+      }
+      
+      if (twoHoursBeforeDate > now) {
+        const twoHoursBeforeId = await Notifications.scheduleNotificationAsync({
+          content: {
+            title: 'Event Soon',
+            body: `Reminder: ${event.title} at ${event.mosque_name} starts in 2 hours`,
+            data: { eventId },
+          },
+          trigger: twoHoursBeforeDate,
+        });
+        notificationIds.push(twoHoursBeforeId);
+      }
+      
+      // Save notification IDs
+      if (notificationIds.length > 0) {
+        const updatedNotifications = [...eventNotifications];
+        const existingIndex = updatedNotifications.findIndex(n => n.eventId === eventId);
+        
+        if (existingIndex >= 0) {
+          updatedNotifications[existingIndex].notificationIds = notificationIds;
+        } else {
+          updatedNotifications.push({ eventId, notificationIds });
+        }
+        
+        setEventNotifications(updatedNotifications);
+        await AsyncStorage.setItem('eventNotifications', JSON.stringify(updatedNotifications));
+      }
+      
+      return notificationIds.length > 0;
+    } catch (error) {
+      console.error('Error scheduling notifications:', error);
+      return false;
+    }
+  };
+  
+  // Cancel notifications for an event
+  const cancelEventNotifications = async (eventId: string) => {
+    if (Platform.OS === 'web') return false;
+    
+    try {
+      const eventNotification = eventNotifications.find(n => n.eventId === eventId);
+      if (!eventNotification) return false;
+      
+      // Cancel each notification
+      for (const notificationId of eventNotification.notificationIds) {
+        await Notifications.cancelScheduledNotificationAsync(notificationId);
+      }
+      
+      // Update state and storage
+      const updatedNotifications = eventNotifications.filter(n => n.eventId !== eventId);
+      setEventNotifications(updatedNotifications);
+      await AsyncStorage.setItem('eventNotifications', JSON.stringify(updatedNotifications));
+      
+      return true;
+    } catch (error) {
+      console.error('Error canceling notifications:', error);
+      return false;
+    }
+  };
+  
+  // Check if an event has notifications
+  const hasEventNotifications = (eventId: string): boolean => {
+    return eventNotifications.some(n => n.eventId === eventId);
   };
   
   // Rate an event
@@ -209,5 +394,8 @@ export default function useEvents(
     refreshSavedEvents: loadSavedEvents,
     rateEvent,
     getEventRating,
+    scheduleEventNotifications,
+    cancelEventNotifications,
+    hasEventNotifications,
   };
 }

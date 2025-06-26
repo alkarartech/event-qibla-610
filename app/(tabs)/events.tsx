@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, Platform, TextInput } from 'react-native';
-import { MapPin, Filter, Calendar, ChevronDown, ChevronRight, X } from 'lucide-react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, Platform, TextInput, RefreshControl } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
+import { MapPin, Filter, Calendar, ChevronDown, ChevronRight, X, ArrowDownUp } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { globalStyles } from '@/constants/theme';
 import EventCard from '@/components/EventCard';
@@ -47,8 +48,9 @@ const languages = ['All', 'English', 'Arabic', 'Urdu', 'Farsi', 'Turkish'];
 const denominations = ['All', 'Sunni', 'Shia'];
 
 export default function EventsScreen() {
+  const params = useLocalSearchParams();
   const { location, locationName, loading: locationLoading } = useLocation();
-  const { allEvents, nearbyEvents, savedEvents, loading: eventsLoading } = useEvents(
+  const { allEvents, nearbyEvents, savedEvents, loading: eventsLoading, refreshSavedEvents } = useEvents(
     location?.coords.latitude,
     location?.coords.longitude,
     10
@@ -65,6 +67,7 @@ export default function EventsScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [customDate, setCustomDate] = useState(new Date());
   const [sortBy, setSortBy] = useState('relevance');
+  const [refreshing, setRefreshing] = useState(false);
 
   // Filter settings
   const [filterSettings, setFilterSettings] = useState({
@@ -74,6 +77,16 @@ export default function EventsScreen() {
     denomination: 'All',
     proximity: 10, // in km
   });
+  
+  // Check if we should show saved events based on URL params
+  useEffect(() => {
+    if (params.filter === 'saved') {
+      setFilterSettings(prev => ({
+        ...prev,
+        saved: true
+      }));
+    }
+  }, [params]);
 
   useEffect(() => {
     let events = allEvents;
@@ -179,6 +192,13 @@ export default function EventsScreen() {
     location
   ]);
 
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    refreshSavedEvents().then(() => {
+      setRefreshing(false);
+    });
+  }, [refreshSavedEvents]);
+
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
     const R = 6371; // Radius of the earth in km
     const dLat = deg2rad(lat2 - lat1);
@@ -282,11 +302,11 @@ export default function EventsScreen() {
             ]}
             onPress={() => setShowSortModal(true)}
           >
+            <ArrowDownUp size={16} color={isDarkMode ? Colors.white : Colors.text} />
             <Text style={[
               styles.filterButtonText,
               isDarkMode && styles.filterButtonTextDark
             ]}>Sort: {getSelectedSortLabel()}</Text>
-            <ChevronDown size={16} color={isDarkMode ? Colors.white : Colors.text} />
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -296,7 +316,7 @@ export default function EventsScreen() {
             ]}
             onPress={() => setShowFilterModal(true)}
           >
-            <Filter size={18} color={isDarkMode ? Colors.white : Colors.text} />
+            <Filter size={16} color={isDarkMode ? Colors.white : Colors.text} />
             <Text style={[
               styles.filterButtonText,
               isDarkMode && styles.filterButtonTextDark
@@ -310,7 +330,7 @@ export default function EventsScreen() {
             ]}
             onPress={() => setShowTimeFilterModal(true)}
           >
-            <Calendar size={18} color={isDarkMode ? Colors.white : Colors.text} />
+            <Calendar size={16} color={isDarkMode ? Colors.white : Colors.text} />
             <Text style={[
               styles.filterButtonText,
               isDarkMode && styles.filterButtonTextDark
@@ -327,6 +347,14 @@ export default function EventsScreen() {
           renderItem={({ item }) => <EventCard event={item} />}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[Colors.primary]}
+              tintColor={isDarkMode ? Colors.white : Colors.primary}
+            />
+          }
           ListEmptyComponent={
             <EmptyState
               title="No Events Found"
@@ -727,6 +755,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     flex: 1,
+    gap: 6,
   },
   filterButtonDark: {
     backgroundColor: '#2a2a2a',
@@ -734,7 +763,6 @@ const styles = StyleSheet.create({
   filterButtonText: {
     fontSize: 14,
     color: Colors.text,
-    marginLeft: 6,
     flex: 1,
   },
   filterButtonTextDark: {

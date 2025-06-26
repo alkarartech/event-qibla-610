@@ -1,11 +1,12 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Calendar, Clock, MapPin, Heart } from 'lucide-react-native';
+import { Calendar, Clock, MapPin, Heart, Bell, BellOff } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { Event } from '@/mocks/events';
 import { globalStyles } from '@/constants/theme';
 import useEvents from '@/hooks/useEvents';
+import useThemeStore from '@/hooks/useThemeStore';
 
 interface EventCardProps {
   event: Event;
@@ -14,8 +15,10 @@ interface EventCardProps {
 
 export default function EventCard({ event, compact = false }: EventCardProps) {
   const router = useRouter();
-  const { isEventSaved, saveEvent, unsaveEvent } = useEvents();
+  const { isEventSaved, saveEvent, unsaveEvent, hasEventNotifications, scheduleEventNotifications, cancelEventNotifications } = useEvents();
+  const { use24HourFormat } = useThemeStore();
   const isSaved = isEventSaved(event.id);
+  const hasNotifications = hasEventNotifications(event.id);
 
   const handlePress = () => {
     router.push(`/event/${event.id}`);
@@ -27,6 +30,15 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
       unsaveEvent(event.id);
     } else {
       saveEvent(event.id);
+    }
+  };
+  
+  const handleNotificationToggle = (e: any) => {
+    e.stopPropagation();
+    if (hasNotifications) {
+      cancelEventNotifications(event.id);
+    } else {
+      scheduleEventNotifications(event.id);
     }
   };
 
@@ -42,6 +54,34 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
         return '#E91E63';
       default:
         return '#9C27B0';
+    }
+  };
+  
+  // Format time based on user preference
+  const formatTime = (timeString: string) => {
+    if (use24HourFormat) {
+      // Convert to 24-hour format if it's in 12-hour format
+      if (timeString.includes('AM') || timeString.includes('PM')) {
+        const [timePart, period] = timeString.split(' ');
+        const [hours, minutes] = timePart.split(':').map(Number);
+        
+        let hour24 = hours;
+        if (period === 'PM' && hours < 12) hour24 += 12;
+        if (period === 'AM' && hours === 12) hour24 = 0;
+        
+        return `${hour24.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+      }
+      return timeString;
+    } else {
+      // Convert to 12-hour format if it's in 24-hour format
+      if (!timeString.includes('AM') && !timeString.includes('PM')) {
+        const [hours, minutes] = timeString.split(':').map(Number);
+        const period = hours >= 12 ? 'PM' : 'AM';
+        const hour12 = hours % 12 || 12;
+        
+        return `${hour12}:${minutes.toString().padStart(2, '0')} ${period}`;
+      }
+      return timeString;
     }
   };
 
@@ -98,7 +138,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
         
         <View style={styles.detailRow}>
           <Clock size={16} color={Colors.textSecondary} />
-          <Text style={styles.detailText}>{event.time}</Text>
+          <Text style={styles.detailText}>{formatTime(event.time)}{event.endTime && ` - ${formatTime(event.endTime)}`}</Text>
         </View>
         
         <View style={styles.detailRow}>
@@ -113,16 +153,31 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
             </Text>
           </View>
           
-          <TouchableOpacity 
-            style={styles.saveButton} 
-            onPress={handleSaveToggle}
-          >
-            <Heart 
-              size={20} 
-              color={isSaved ? Colors.error : Colors.textSecondary} 
-              fill={isSaved ? Colors.error : 'none'} 
-            />
-          </TouchableOpacity>
+          <View style={styles.actionButtons}>
+            {isSaved && (
+              <TouchableOpacity 
+                style={styles.actionButton} 
+                onPress={handleNotificationToggle}
+              >
+                {hasNotifications ? (
+                  <Bell size={20} color={Colors.primary} fill={Colors.primary} />
+                ) : (
+                  <BellOff size={20} color={Colors.textSecondary} />
+                )}
+              </TouchableOpacity>
+            )}
+            
+            <TouchableOpacity 
+              style={styles.actionButton} 
+              onPress={handleSaveToggle}
+            >
+              <Heart 
+                size={20} 
+                color={isSaved ? Colors.error : Colors.textSecondary} 
+                fill={isSaved ? Colors.error : 'none'} 
+              />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </TouchableOpacity>
@@ -176,7 +231,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
-  saveButton: {
+  actionButtons: {
+    flexDirection: 'row',
+  },
+  actionButton: {
     padding: 8,
   },
   compactCard: {

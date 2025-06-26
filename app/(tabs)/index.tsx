@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MapPin, Calendar, ChevronRight } from 'lucide-react-native';
 import Colors from '@/constants/colors';
@@ -34,6 +34,7 @@ export default function HomeScreen() {
   );
 
   const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
 
   const isLoading = locationLoading || mosquesLoading || eventsLoading;
 
@@ -58,6 +59,13 @@ export default function HomeScreen() {
     setUpcomingEvents(upcoming);
   }, [nearbyEvents, savedEvents]);
 
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    refreshSavedEvents().then(() => {
+      setRefreshing(false);
+    });
+  }, [refreshSavedEvents]);
+
   const renderMosqueItem = ({ item }: { item: Mosque }) => (
     <MosqueCard mosque={item} compact />
   );
@@ -71,6 +79,14 @@ export default function HomeScreen() {
     router.push('/calendar');
   };
 
+  const handleSeeAllEvents = () => {
+    // Navigate to the events screen with a filter for saved events
+    router.push({
+      pathname: '/events',
+      params: { filter: 'saved' }
+    });
+  };
+
   return (
     <ScrollView 
       style={[
@@ -78,6 +94,14 @@ export default function HomeScreen() {
         isDarkMode && styles.containerDark
       ]} 
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={[Colors.primary]}
+          tintColor={isDarkMode ? Colors.white : Colors.primary}
+        />
+      }
     >
       {/* Header with Calendar Button */}
       <View style={styles.headerContainer}>
@@ -112,7 +136,7 @@ export default function HomeScreen() {
               ]}>Upcoming Events</Text>
               <TouchableOpacity 
                 style={styles.seeAllButton}
-                onPress={() => router.push('/events')}
+                onPress={handleSeeAllEvents}
               >
                 <Text style={styles.seeAllText}>See All</Text>
                 <ChevronRight size={16} color={Colors.primary} />
@@ -180,10 +204,7 @@ export default function HomeScreen() {
                 ]}>Your Saved Events</Text>
                 <TouchableOpacity 
                   style={styles.seeAllButton}
-                  onPress={() => {
-                    router.push('/events');
-                    // In a real app, we would set the filter to 'saved' on the events screen
-                  }}
+                  onPress={handleSeeAllEvents}
                 >
                   <Text style={styles.seeAllText}>See All</Text>
                   <ChevronRight size={16} color={Colors.primary} />
