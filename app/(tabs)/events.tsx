@@ -274,13 +274,26 @@ export default function EventsScreen() {
 
   // Handle date change for the date picker
   const handleDateChange = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(false);
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
     
     if (selectedDate) {
       setCustomDate(selectedDate);
       setSelectedTimeFilter('custom');
-      setShowTimeFilterModal(false);
+      
+      if (Platform.OS === 'ios') {
+        // For iOS, we'll keep the picker open until the user presses "Done"
+      } else {
+        setShowTimeFilterModal(false);
+      }
     }
+  };
+  
+  // For iOS, handle the "Done" button press
+  const handleDatePickerDone = () => {
+    setShowDatePicker(false);
+    setShowTimeFilterModal(false);
   };
 
   return (
@@ -351,7 +364,9 @@ export default function EventsScreen() {
             <Text style={[
               styles.filterButtonText,
               isDarkMode && styles.filterButtonTextDark
-            ]}>{getSelectedTimeFilterLabel()}</Text>
+            ]}>
+              {getSelectedTimeFilterLabel()}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -676,15 +691,50 @@ export default function EventsScreen() {
 
       {/* Date Picker for Custom Date */}
       {showDatePicker && (
-        <DateTimePicker
-          value={customDate}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={handleDateChange}
-          style={styles.datePicker}
-          positiveButton={{label: 'OK', textColor: Colors.primary}}
-          negativeButton={{label: 'Cancel', textColor: Colors.textSecondary}}
-        />
+        Platform.OS === 'ios' ? (
+          <Modal
+            visible={showDatePicker}
+            transparent={true}
+            animationType="slide"
+          >
+            <View style={styles.datePickerModalContainer}>
+              <View style={[
+                styles.datePickerContainer,
+                isDarkMode && styles.datePickerContainerDark
+              ]}>
+                <View style={styles.datePickerHeader}>
+                  <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                    <Text style={styles.datePickerCancelButton}>Cancel</Text>
+                  </TouchableOpacity>
+                  <Text style={[
+                    styles.datePickerTitle,
+                    isDarkMode && styles.datePickerTitleDark
+                  ]}>Select Date</Text>
+                  <TouchableOpacity onPress={handleDatePickerDone}>
+                    <Text style={styles.datePickerDoneButton}>Done</Text>
+                  </TouchableOpacity>
+                </View>
+                <DateTimePicker
+                  value={customDate}
+                  mode="date"
+                  display="spinner"
+                  onChange={handleDateChange}
+                  style={styles.iosDatePicker}
+                  textColor={isDarkMode ? Colors.white : Colors.text}
+                />
+              </View>
+            </View>
+          </Modal>
+        ) : (
+          <DateTimePicker
+            value={customDate}
+            mode="date"
+            display="default"
+            onChange={handleDateChange}
+            positiveButton={{label: 'OK', textColor: Colors.primary}}
+            negativeButton={{label: 'Cancel', textColor: Colors.textSecondary}}
+          />
+        )
       )}
     </View>
   );
@@ -927,8 +977,47 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 16,
   },
-  datePicker: {
+  datePickerModalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  datePickerContainer: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 30,
+  },
+  datePickerContainerDark: {
+    backgroundColor: '#1e1e1e',
+  },
+  datePickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  datePickerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  datePickerTitleDark: {
+    color: Colors.white,
+  },
+  datePickerCancelButton: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+  },
+  datePickerDoneButton: {
+    fontSize: 16,
+    color: Colors.primary,
+    fontWeight: '600',
+  },
+  iosDatePicker: {
+    height: 200,
     width: '100%',
-    backgroundColor: Platform.OS === 'ios' ? Colors.white : 'transparent',
   },
 });

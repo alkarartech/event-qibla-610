@@ -397,44 +397,115 @@ ${hijriDate.year} Hijri`;
     setLastClickTime(now);
   }, [lastClickTime]);
   
+  // Create calendar event URL for Google Calendar
+  const createGoogleCalendarUrl = (events: Event[]) => {
+    // Base URL for Google Calendar
+    const baseUrl = 'https://calendar.google.com/calendar/render?action=TEMPLATE';
+    
+    // Create URL for the first event (Google Calendar can only handle one event at a time via URL)
+    if (events.length > 0) {
+      const event = events[0];
+      const eventDate = new Date(event.date);
+      
+      // Parse time
+      const { hours, minutes } = parseTimeString(event.time);
+      eventDate.setHours(hours, minutes, 0);
+      
+      // Calculate end time (default to 1 hour later if not specified)
+      const endDate = new Date(eventDate);
+      if (event.endTime) {
+        const { hours: endHours, minutes: endMinutes } = parseTimeString(event.endTime);
+        endDate.setHours(endHours, endMinutes, 0);
+      } else {
+        endDate.setHours(endDate.getHours() + 1);
+      }
+      
+      // Format dates for URL
+      const formatDateForUrl = (date: Date) => {
+        return date.toISOString().replace(/-|:|\.\d+/g, '');
+      };
+      
+      const startTime = formatDateForUrl(eventDate);
+      const endTime = formatDateForUrl(endDate);
+      
+      // Create URL parameters
+      const params = new URLSearchParams({
+        text: event.title,
+        dates: `${startTime}/${endTime}`,
+        details: event.description,
+        location: event.mosque_name,
+      });
+      
+      return `${baseUrl}&${params.toString()}`;
+    }
+    
+    return baseUrl;
+  };
+  
   // Handle sync with external calendars
   const handleSyncCalendar = async (calendarType: 'google' | 'apple') => {
     setShowSyncOptions(false);
     
     try {
-      // Create a text representation of events for sharing
-      const eventsText = savedEvents.map(event => {
-        return `${event.title}
+      if (savedEvents.length === 0) {
+        Alert.alert(
+          'No Events',
+          'You have no saved events to sync.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+      
+      if (calendarType === 'google') {
+        // Create Google Calendar URL
+        const googleCalendarUrl = createGoogleCalendarUrl(savedEvents);
+        
+        // Check if we can open the URL
+        const canOpen = await Linking.canOpenURL(googleCalendarUrl);
+        
+        if (canOpen) {
+          await Linking.openURL(googleCalendarUrl);
+          
+          // Show instructions for multiple events
+          if (savedEvents.length > 1) {
+            Alert.alert(
+              'Multiple Events',
+              'Google Calendar can only add one event at a time via this method. Please repeat the process for each event you want to add.',
+              [{ text: 'OK' }]
+            );
+          }
+        } else {
+          // Fallback to sharing if can't open the URL
+          await Share.share({
+            title: 'My Mosque Events',
+            message: `Add my mosque events to your calendar: ${googleCalendarUrl}`,
+          });
+        }
+      } else if (calendarType === 'apple' && Platform.OS === 'ios') {
+        // For iOS, we can try to use the Calendar app URL scheme
+        const icalUrl = 'calshow://';
+        const canOpen = await Linking.canOpenURL(icalUrl);
+        
+        if (canOpen) {
+          // This just opens the Calendar app, doesn't add events
+          await Linking.openURL(icalUrl);
+          
+          // Show instructions
+          Alert.alert(
+            'Calendar App',
+            'The Calendar app has been opened. Please manually add your events.',
+            [{ text: 'OK' }]
+          );
+        } else {
+          // Fallback to sharing
+          const eventsText = savedEvents.map(event => {
+            return `${event.title}
 Date: ${event.date}
 Time: ${event.time}${event.endTime ? ` - ${event.endTime}` : ''}
 Location: ${event.mosque_name}
 `;
-      }).join('\n');
-      
-      // Attempt to open the appropriate calendar app
-      if (calendarType === 'google') {
-        // Google Calendar URL scheme
-        const url = 'https://calendar.google.com/calendar/';
-        const canOpen = await Linking.canOpenURL(url);
-        
-        if (canOpen) {
-          await Linking.openURL(url);
-        } else {
-          // Fallback to sharing if can't open the app
-          await Share.share({
-            title: 'My Mosque Events',
-            message: `My Mosque Events\n\n${eventsText}`,
-          });
-        }
-      } else if (calendarType === 'apple' && Platform.OS === 'ios') {
-        // Apple Calendar URL scheme
-        const url = 'calshow://';
-        const canOpen = await Linking.canOpenURL(url);
-        
-        if (canOpen) {
-          await Linking.openURL(url);
-        } else {
-          // Fallback to sharing if can't open the app
+          }).join('\n');
+          
           await Share.share({
             title: 'My Mosque Events',
             message: `My Mosque Events\n\n${eventsText}`,
@@ -442,17 +513,19 @@ Location: ${event.mosque_name}
         }
       } else {
         // Fallback for other platforms
+        const eventsText = savedEvents.map(event => {
+          return `${event.title}
+Date: ${event.date}
+Time: ${event.time}${event.endTime ? ` - ${event.endTime}` : ''}
+Location: ${event.mosque_name}
+`;
+        }).join('\n');
+        
         await Share.share({
           title: 'My Mosque Events',
           message: `My Mosque Events\n\n${eventsText}`,
         });
       }
-      
-      Alert.alert(
-        'Calendar Sync',
-        `Events have been prepared for export to ${calendarType === 'google' ? 'Google Calendar' : 'Apple Calendar'}. Please follow the instructions in the calendar app to import them.`,
-        [{ text: 'OK' }]
-      );
     } catch (error) {
       Alert.alert(
         'Error',
