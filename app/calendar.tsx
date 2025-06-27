@@ -504,11 +504,14 @@ Date: ${event.date}
 Time: ${event.time}${event.endTime ? ` - ${event.endTime}` : ''}
 Location: ${event.mosque_name}
 `;
-          }).join('\n');
+          }).join('
+');
           
           await Share.share({
             title: 'My Mosque Events',
-            message: `My Mosque Events\n\n${eventsText}`,
+            message: `My Mosque Events
+
+${eventsText}`,
           });
         }
       } else {
@@ -519,11 +522,14 @@ Date: ${event.date}
 Time: ${event.time}${event.endTime ? ` - ${event.endTime}` : ''}
 Location: ${event.mosque_name}
 `;
-        }).join('\n');
+        }).join('
+');
         
         await Share.share({
           title: 'My Mosque Events',
-          message: `My Mosque Events\n\n${eventsText}`,
+          message: `My Mosque Events
+
+${eventsText}`,
         });
       }
     } catch (error) {

@@ -14,7 +14,7 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
-    // Removed FontAwesome to fix loading error
+    // No custom fonts needed
   });
 
   useEffect(() => {
@@ -76,6 +76,14 @@ function RootLayoutNav() {
           options={{ 
             title: "Saved Events",
             animation: "slide_from_right",
+          }} 
+        />
+        <Stack.Screen 
+          name="calendar" 
+          options={{ 
+            title: "Calendar",
+            animation: "slide_from_right",
+            headerShown: false,
           }} 
         />
       </Stack>

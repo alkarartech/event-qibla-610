@@ -450,7 +450,7 @@ export default function EventsScreen() {
           <View style={[
             styles.modalContent,
             isDarkMode && styles.modalContentDark,
-            { height: 200 }
+            { height: 240 } // Increased height for better spacing
           ]}>
             <View style={styles.modalHeader}>
               <Text style={[
@@ -572,6 +572,7 @@ export default function EventsScreen() {
           <FlatList
             data={[1]} // Dummy data to render once
             keyExtractor={() => "filters"}
+            contentContainerStyle={styles.filterListContent}
             renderItem={() => (
               <>
                 <View style={styles.filterSection}>
@@ -875,6 +876,9 @@ const styles = StyleSheet.create({
   fullScreenModalContainerDark: {
     backgroundColor: '#121212',
   },
+  filterListContent: {
+    paddingTop: 20, // Added more top padding
+  },
   filterSection: {
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -992,11 +996,12 @@ const styles = StyleSheet.create({
   },
   customDateContainer: {
     padding: 16,
+    paddingTop: 24, // Increased top padding
   },
   customDateLabel: {
     fontSize: 16,
     color: Colors.text,
-    marginBottom: 12,
+    marginBottom: 16, // Increased bottom margin
   },
   customDateLabelDark: {
     color: Colors.white,
@@ -1006,10 +1011,10 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 12, // Increased vertical padding
     fontSize: 16,
     color: Colors.text,
-    marginBottom: 16,
+    marginBottom: 24, // Increased bottom margin
   },
   customDateInputDark: {
     borderColor: '#333333',
@@ -1018,7 +1023,7 @@ const styles = StyleSheet.create({
   },
   customDateSubmitButton: {
     backgroundColor: Colors.primary,
-    paddingVertical: 12,
+    paddingVertical: 14, // Increased vertical padding
     borderRadius: 8,
     alignItems: 'center',
   },

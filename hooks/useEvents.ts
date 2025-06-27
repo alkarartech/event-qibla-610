@@ -237,7 +237,6 @@ export default function useEvents(
           },
           trigger: {
             seconds: Math.floor((dayBeforeDate.getTime() - now.getTime()) / 1000),
-            channelId: 'event-reminders',
           },
         });
         notificationIds.push(dayBeforeId);
@@ -252,7 +251,6 @@ export default function useEvents(
           },
           trigger: {
             seconds: Math.floor((twoHoursBeforeDate.getTime() - now.getTime()) / 1000),
-            channelId: 'event-reminders',
           },
         });
         notificationIds.push(twoHoursBeforeId);
