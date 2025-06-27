@@ -12,7 +12,6 @@ import LocationSelector from '@/components/LocationSelector';
 import useLocation from '@/hooks/useLocation';
 import useEvents from '@/hooks/useEvents';
 import useThemeStore from '@/hooks/useThemeStore';
-import DateTimePicker from '@react-native-community/datetimepicker';
 
 // Time filter options
 const timeFilterOptions = [
@@ -64,8 +63,8 @@ export default function EventsScreen() {
   const [showTimeFilterModal, setShowTimeFilterModal] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showSortModal, setShowSortModal] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [customDate, setCustomDate] = useState(new Date());
+  const [customDateString, setCustomDateString] = useState('');
   const [sortBy, setSortBy] = useState('relevance');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -125,6 +124,16 @@ export default function EventsScreen() {
           case 'thisMonth':
             return eventDate >= today && eventDate <= thisMonthEnd;
           case 'custom':
+            if (customDateString) {
+              try {
+                const [month, day, year] = customDateString.split('/').map(Number);
+                const selectedDate = new Date(year, month - 1, day);
+                return eventDate.toDateString() === selectedDate.toDateString();
+              } catch (error) {
+                console.error('Invalid date format:', error);
+                return false;
+              }
+            }
             return eventDate.toDateString() === customDate.toDateString();
           default:
             return true;
@@ -183,7 +192,8 @@ export default function EventsScreen() {
   }, [
     searchQuery, 
     selectedTimeFilter, 
-    customDate, 
+    customDate,
+    customDateString,
     filterSettings, 
     sortBy, 
     allEvents, 
@@ -238,7 +248,7 @@ export default function EventsScreen() {
       onPress={() => {
         setSelectedTimeFilter(item.id);
         if (item.id === 'custom') {
-          setShowDatePicker(true);
+          setShowCustomDateInput(true);
         } else {
           setShowTimeFilterModal(false);
         }
@@ -261,7 +271,7 @@ export default function EventsScreen() {
 
   const getSelectedTimeFilterLabel = () => {
     if (selectedTimeFilter === 'custom') {
-      return `${customDate.toLocaleDateString()}`;
+      return customDateString || 'MM/DD/YYYY';
     }
     const option = timeFilterOptions.find(option => option.id === selectedTimeFilter);
     return option ? option.label : 'Anytime';
@@ -272,28 +282,23 @@ export default function EventsScreen() {
     return option ? option.label : 'Relevance';
   };
 
-  // Handle date change for the date picker
-  const handleDateChange = (event: any, selectedDate?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowDatePicker(false);
-    }
-    
-    if (selectedDate) {
-      setCustomDate(selectedDate);
-      setSelectedTimeFilter('custom');
-      
-      if (Platform.OS === 'ios') {
-        // For iOS, we'll keep the picker open until the user presses "Done"
-      } else {
+  // State for custom date input
+  const [showCustomDateInput, setShowCustomDateInput] = useState(false);
+
+  // Handle custom date input
+  const handleCustomDateSubmit = () => {
+    if (customDateString) {
+      // Validate date format (MM/DD/YYYY)
+      const dateRegex = /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/\d{4}$/;
+      if (dateRegex.test(customDateString)) {
+        setSelectedTimeFilter('custom');
+        setShowCustomDateInput(false);
         setShowTimeFilterModal(false);
+      } else {
+        // Show error or handle invalid format
+        alert('Please enter a valid date in MM/DD/YYYY format');
       }
     }
-  };
-  
-  // For iOS, handle the "Done" button press
-  const handleDatePickerDone = () => {
-    setShowDatePicker(false);
-    setShowTimeFilterModal(false);
   };
 
   return (
@@ -354,7 +359,7 @@ export default function EventsScreen() {
             ]}
             onPress={() => {
               if (selectedTimeFilter === 'custom') {
-                setShowDatePicker(true);
+                setShowCustomDateInput(true);
               } else {
                 setShowTimeFilterModal(true);
               }
@@ -430,6 +435,62 @@ export default function EventsScreen() {
               keyExtractor={(item) => item.id}
               contentContainerStyle={styles.timeFilterList}
             />
+          </View>
+        </View>
+      </Modal>
+
+      {/* Custom Date Input Modal */}
+      <Modal
+        visible={showCustomDateInput}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowCustomDateInput(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[
+            styles.modalContent,
+            isDarkMode && styles.modalContentDark,
+            { height: 200 }
+          ]}>
+            <View style={styles.modalHeader}>
+              <Text style={[
+                styles.modalTitle,
+                isDarkMode && styles.modalTitleDark
+              ]}>Enter Date</Text>
+              <TouchableOpacity onPress={() => setShowCustomDateInput(false)}>
+                <Text style={styles.modalCloseButton}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.customDateContainer}>
+              <Text style={[
+                styles.customDateLabel,
+                isDarkMode && styles.customDateLabelDark
+              ]}>
+                Enter date in MM/DD/YYYY format:
+              </Text>
+              
+              <TextInput
+                style={[
+                  styles.customDateInput,
+                  isDarkMode && styles.customDateInputDark
+                ]}
+                placeholder="MM/DD/YYYY"
+                placeholderTextColor={isDarkMode ? '#777777' : '#999999'}
+                value={customDateString}
+                onChangeText={setCustomDateString}
+                keyboardType="numbers-and-punctuation"
+              />
+              
+              <TouchableOpacity
+                style={styles.customDateSubmitButton}
+                onPress={handleCustomDateSubmit}
+              >
+                <Text style={styles.customDateSubmitButtonText}>
+                  Apply
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -688,54 +749,6 @@ export default function EventsScreen() {
           />
         </View>
       </Modal>
-
-      {/* Date Picker for Custom Date */}
-      {showDatePicker && (
-        Platform.OS === 'ios' ? (
-          <Modal
-            visible={showDatePicker}
-            transparent={true}
-            animationType="slide"
-          >
-            <View style={styles.datePickerModalContainer}>
-              <View style={[
-                styles.datePickerContainer,
-                isDarkMode && styles.datePickerContainerDark
-              ]}>
-                <View style={styles.datePickerHeader}>
-                  <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                    <Text style={styles.datePickerCancelButton}>Cancel</Text>
-                  </TouchableOpacity>
-                  <Text style={[
-                    styles.datePickerTitle,
-                    isDarkMode && styles.datePickerTitleDark
-                  ]}>Select Date</Text>
-                  <TouchableOpacity onPress={handleDatePickerDone}>
-                    <Text style={styles.datePickerDoneButton}>Done</Text>
-                  </TouchableOpacity>
-                </View>
-                <DateTimePicker
-                  value={customDate}
-                  mode="date"
-                  display="spinner"
-                  onChange={handleDateChange}
-                  style={styles.iosDatePicker}
-                  textColor={isDarkMode ? Colors.white : Colors.text}
-                />
-              </View>
-            </View>
-          </Modal>
-        ) : (
-          <DateTimePicker
-            value={customDate}
-            mode="date"
-            display="default"
-            onChange={handleDateChange}
-            positiveButton={{label: 'OK', textColor: Colors.primary}}
-            negativeButton={{label: 'Cancel', textColor: Colors.textSecondary}}
-          />
-        )
-      )}
     </View>
   );
 }
@@ -977,47 +990,41 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 16,
   },
-  datePickerModalContainer: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  datePickerContainer: {
-    backgroundColor: Colors.white,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 30,
-  },
-  datePickerContainerDark: {
-    backgroundColor: '#1e1e1e',
-  },
-  datePickerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  customDateContainer: {
     padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
   },
-  datePickerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+  customDateLabel: {
+    fontSize: 16,
     color: Colors.text,
+    marginBottom: 12,
   },
-  datePickerTitleDark: {
+  customDateLabelDark: {
     color: Colors.white,
   },
-  datePickerCancelButton: {
+  customDateInput: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     fontSize: 16,
-    color: Colors.textSecondary,
+    color: Colors.text,
+    marginBottom: 16,
   },
-  datePickerDoneButton: {
+  customDateInputDark: {
+    borderColor: '#333333',
+    color: Colors.white,
+    backgroundColor: '#2a2a2a',
+  },
+  customDateSubmitButton: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  customDateSubmitButtonText: {
+    color: Colors.white,
     fontSize: 16,
-    color: Colors.primary,
     fontWeight: '600',
-  },
-  iosDatePicker: {
-    height: 200,
-    width: '100%',
   },
 });

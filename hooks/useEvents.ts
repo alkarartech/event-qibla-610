@@ -235,7 +235,10 @@ export default function useEvents(
             body: `Don't forget: ${event.title} at ${event.mosque_name} tomorrow at ${event.time}`,
             data: { eventId },
           },
-          trigger: dayBeforeDate.getTime(), // Use timestamp for Expo SDK 52
+          trigger: {
+            seconds: Math.floor((dayBeforeDate.getTime() - now.getTime()) / 1000),
+            channelId: 'event-reminders',
+          },
         });
         notificationIds.push(dayBeforeId);
       }
@@ -247,7 +250,10 @@ export default function useEvents(
             body: `Reminder: ${event.title} at ${event.mosque_name} starts in 2 hours`,
             data: { eventId },
           },
-          trigger: twoHoursBeforeDate.getTime(), // Use timestamp for Expo SDK 52
+          trigger: {
+            seconds: Math.floor((twoHoursBeforeDate.getTime() - now.getTime()) / 1000),
+            channelId: 'event-reminders',
+          },
         });
         notificationIds.push(twoHoursBeforeId);
       }
