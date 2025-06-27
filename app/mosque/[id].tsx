@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, Image } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { MapPin, Phone, Globe, Clock, Calendar, ChevronRight, DollarSign } from 'lucide-react-native';
+import { MapPin, Phone, Globe, Clock, Calendar, ChevronRight, DollarSign, Heart } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { globalStyles } from '@/constants/theme';
 import PrayerTimesCard from '@/components/PrayerTimesCard';
@@ -15,12 +15,13 @@ import useThemeStore from '@/hooks/useThemeStore';
 
 export default function MosqueDetailScreen() {
   const { id } = useLocalSearchParams();
-  const { getMosqueById, loading: mosquesLoading } = useMosques();
+  const { getMosqueById, loading: mosquesLoading, isMosqueFavorite, toggleFavoriteMosque } = useMosques();
   const { getEventsByMosqueId, loading: eventsLoading } = useEvents();
   const { isDarkMode, use24HourFormat } = useThemeStore();
 
   const mosque = getMosqueById(id as string);
   const mosqueEvents = mosque ? getEventsByMosqueId(mosque.id) : [];
+  const isFavorite = mosque ? isMosqueFavorite(mosque.id) : false;
 
   const isLoading = mosquesLoading || eventsLoading;
 
@@ -54,6 +55,12 @@ export default function MosqueDetailScreen() {
     } else {
       // Generic donation page
       Linking.openURL('https://kamal-aldeen.com/donate');
+    }
+  };
+
+  const handleFavoriteToggle = () => {
+    if (mosque) {
+      toggleFavoriteMosque(mosque.id);
     }
   };
 
@@ -135,10 +142,23 @@ export default function MosqueDetailScreen() {
       )}
 
       <View style={styles.content}>
-        <Text style={[
-          styles.name,
-          isDarkMode && styles.nameDark
-        ]}>{mosque.name}</Text>
+        <View style={styles.headerRow}>
+          <Text style={[
+            styles.name,
+            isDarkMode && styles.nameDark
+          ]}>{mosque.name}</Text>
+          
+          <TouchableOpacity 
+            style={styles.favoriteButton}
+            onPress={handleFavoriteToggle}
+          >
+            <Heart 
+              size={24} 
+              color={isFavorite ? Colors.error : isDarkMode ? Colors.white : Colors.textSecondary} 
+              fill={isFavorite ? Colors.error : 'none'} 
+            />
+          </TouchableOpacity>
+        </View>
         
         {mosque.denomination && (
           <View style={styles.denominationTag}>
@@ -341,14 +361,23 @@ const styles = StyleSheet.create({
   content: {
     padding: 16,
   },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   name: {
     fontSize: 24,
     fontWeight: '700',
     color: Colors.text,
     marginBottom: 8,
+    flex: 1,
   },
   nameDark: {
     color: Colors.white,
+  },
+  favoriteButton: {
+    padding: 8,
   },
   denominationTag: {
     alignSelf: 'flex-start',

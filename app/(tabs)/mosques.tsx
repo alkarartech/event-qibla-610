@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal } from 'react-native';
-import { MapPin, Sliders } from 'lucide-react-native';
+import { MapPin, Sliders, Heart } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { globalStyles } from '@/constants/theme';
 import MosqueCard from '@/components/MosqueCard';
@@ -12,10 +12,16 @@ import LocationSelector from '@/components/LocationSelector';
 import useLocation from '@/hooks/useLocation';
 import useMosques from '@/hooks/useMosques';
 import useThemeStore from '@/hooks/useThemeStore';
+import { Mosque } from '@/mocks/mosques';
 
 export default function MosquesScreen() {
   const { location, locationName, loading: locationLoading } = useLocation();
-  const { allMosques, nearbyMosques, loading: mosquesLoading } = useMosques(
+  const { 
+    allMosques, 
+    nearbyMosques, 
+    favoriteMosques,
+    loading: mosquesLoading 
+  } = useMosques(
     location?.coords.latitude,
     location?.coords.longitude,
     10
@@ -28,6 +34,7 @@ export default function MosquesScreen() {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showSortModal, setShowSortModal] = useState(false);
   const [customLocation, setCustomLocation] = useState('');
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   
   // Filter settings
   const [filterSettings, setFilterSettings] = useState({
@@ -39,7 +46,7 @@ export default function MosquesScreen() {
   const languages = ['All', 'English', 'Arabic', 'Urdu', 'Farsi', 'Turkish'];
 
   useEffect(() => {
-    let mosques = allMosques;
+    let mosques = showFavoritesOnly ? favoriteMosques : allMosques;
     
     // Apply denomination filter
     if (filterSettings.denomination && filterSettings.denomination !== 'All') {
@@ -81,7 +88,7 @@ export default function MosquesScreen() {
     }
     
     setFilteredMosques(mosques);
-  }, [searchQuery, allMosques, filterSettings, sortBy, location]);
+  }, [searchQuery, allMosques, favoriteMosques, filterSettings, sortBy, location, showFavoritesOnly]);
 
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
     const R = 6371; // Radius of the earth in km
@@ -111,7 +118,15 @@ export default function MosquesScreen() {
     // In a real app, this would trigger a location-based search
   };
 
+  const toggleFavoritesFilter = () => {
+    setShowFavoritesOnly(!showFavoritesOnly);
+  };
+
   const isLoading = locationLoading || mosquesLoading;
+
+  const renderMosqueItem = ({ item }: { item: Mosque }) => (
+    <MosqueCard mosque={item} />
+  );
 
   return (
     <View style={[
@@ -136,6 +151,26 @@ export default function MosquesScreen() {
         />
         
         <View style={styles.filterButtonsContainer}>
+          <TouchableOpacity 
+            style={[
+              styles.filterButton,
+              isDarkMode && styles.filterButtonDark,
+              showFavoritesOnly && styles.activeFilterButton
+            ]}
+            onPress={toggleFavoritesFilter}
+          >
+            <Heart 
+              size={18} 
+              color={showFavoritesOnly ? Colors.error : isDarkMode ? Colors.white : Colors.text} 
+              fill={showFavoritesOnly ? Colors.error : 'none'} 
+            />
+            <Text style={[
+              styles.filterButtonText,
+              isDarkMode && styles.filterButtonTextDark,
+              showFavoritesOnly && styles.activeFilterText
+            ]}>Favorites</Text>
+          </TouchableOpacity>
+          
           <TouchableOpacity 
             style={[
               styles.filterButton,
@@ -171,16 +206,18 @@ export default function MosquesScreen() {
       ) : (
         <FlatList
           data={filteredMosques}
-          renderItem={({ item }) => <MosqueCard mosque={item} />}
+          renderItem={renderMosqueItem}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={
             <EmptyState
-              title="No Mosques Found"
+              title={showFavoritesOnly ? "No Favorite Mosques" : "No Mosques Found"}
               message={
-                searchQuery
-                  ? "We couldn't find any mosques matching your search."
-                  : "We couldn't find any mosques near your current location."
+                showFavoritesOnly
+                  ? "You haven't added any mosques to your favorites yet."
+                  : searchQuery
+                    ? "We couldn't find any mosques matching your search."
+                    : "We couldn't find any mosques near your current location."
               }
             />
           }
@@ -375,6 +412,9 @@ const styles = StyleSheet.create({
   },
   filterButtonDark: {
     backgroundColor: '#2a2a2a',
+  },
+  activeFilterButton: {
+    backgroundColor: Colors.primaryLight,
   },
   filterButtonText: {
     fontSize: 14,

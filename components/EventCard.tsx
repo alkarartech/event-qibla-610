@@ -16,7 +16,7 @@ interface EventCardProps {
 export default function EventCard({ event, compact = false }: EventCardProps) {
   const router = useRouter();
   const { isEventSaved, saveEvent, unsaveEvent, hasEventNotifications, scheduleEventNotifications, cancelEventNotifications } = useEvents();
-  const { use24HourFormat } = useThemeStore();
+  const { use24HourFormat, isDarkMode } = useThemeStore();
   const isSaved = isEventSaved(event.id);
   const hasNotifications = hasEventNotifications(event.id);
 
@@ -110,22 +110,32 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
   if (compact) {
     return (
       <TouchableOpacity 
-        style={[styles.compactCard, globalStyles.shadow]} 
+        style={[
+          styles.compactCard, 
+          globalStyles.shadow,
+          isDarkMode && styles.compactCardDark
+        ]} 
         onPress={handlePress}
         activeOpacity={0.7}
       >
-        {event.image && (
+        {event.image_url && (
           <Image 
-            source={{ uri: event.image }} 
+            source={{ uri: event.image_url }} 
             style={styles.compactImage} 
             resizeMode="cover"
           />
         )}
         <View style={styles.compactContent}>
-          <Text style={styles.compactTitle} numberOfLines={2}>{event.title}</Text>
+          <Text style={[
+            styles.compactTitle,
+            isDarkMode && styles.compactTitleDark
+          ]} numberOfLines={2}>{event.title}</Text>
           <View style={styles.compactDetails}>
-            <Calendar size={12} color={Colors.textSecondary} />
-            <Text style={styles.compactDetailText}>{event.date}</Text>
+            <Calendar size={12} color={isDarkMode ? Colors.white : Colors.textSecondary} />
+            <Text style={[
+              styles.compactDetailText,
+              isDarkMode && styles.compactDetailTextDark
+            ]}>{event.date}</Text>
           </View>
           <View style={[styles.categoryTag, { backgroundColor: getCategoryColor(event.category) }]}>
             <Text style={styles.categoryText}>
@@ -139,33 +149,49 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
 
   return (
     <TouchableOpacity 
-      style={[styles.card, globalStyles.shadow]} 
+      style={[
+        styles.card, 
+        globalStyles.shadow,
+        isDarkMode && styles.cardDark
+      ]} 
       onPress={handlePress}
       activeOpacity={0.7}
     >
-      {event.image && (
+      {event.image_url && (
         <Image 
-          source={{ uri: event.image }} 
+          source={{ uri: event.image_url }} 
           style={styles.image} 
           resizeMode="cover"
         />
       )}
       <View style={styles.content}>
-        <Text style={styles.title}>{event.title}</Text>
+        <Text style={[
+          styles.title,
+          isDarkMode && styles.titleDark
+        ]}>{event.title}</Text>
         
         <View style={styles.detailRow}>
-          <Calendar size={16} color={Colors.textSecondary} />
-          <Text style={styles.detailText}>{event.date}</Text>
+          <Calendar size={16} color={isDarkMode ? Colors.white : Colors.textSecondary} />
+          <Text style={[
+            styles.detailText,
+            isDarkMode && styles.detailTextDark
+          ]}>{event.date}</Text>
         </View>
         
         <View style={styles.detailRow}>
-          <Clock size={16} color={Colors.textSecondary} />
-          <Text style={styles.detailText}>{formatTime(event.time)}{event.endTime && ` - ${formatTime(event.endTime)}`}</Text>
+          <Clock size={16} color={isDarkMode ? Colors.white : Colors.textSecondary} />
+          <Text style={[
+            styles.detailText,
+            isDarkMode && styles.detailTextDark
+          ]}>{formatTime(event.time)}{event.endTime && ` - ${formatTime(event.endTime)}`}</Text>
         </View>
         
         <View style={styles.detailRow}>
-          <MapPin size={16} color={Colors.textSecondary} />
-          <Text style={styles.detailText} numberOfLines={1}>{event.mosque_name}</Text>
+          <MapPin size={16} color={isDarkMode ? Colors.white : Colors.textSecondary} />
+          <Text style={[
+            styles.detailText,
+            isDarkMode && styles.detailTextDark
+          ]} numberOfLines={1}>{event.mosque_name}</Text>
         </View>
         
         <View style={styles.footer}>
@@ -184,7 +210,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                 {hasNotifications ? (
                   <Bell size={20} color={Colors.primary} fill={Colors.primary} />
                 ) : (
-                  <BellOff size={20} color={Colors.textSecondary} />
+                  <BellOff size={20} color={isDarkMode ? Colors.white : Colors.textSecondary} />
                 )}
               </TouchableOpacity>
             )}
@@ -195,7 +221,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
             >
               <Heart 
                 size={20} 
-                color={isSaved ? Colors.error : Colors.textSecondary} 
+                color={isSaved ? Colors.error : isDarkMode ? Colors.white : Colors.textSecondary} 
                 fill={isSaved ? Colors.error : 'none'} 
               />
             </TouchableOpacity>
@@ -214,6 +240,9 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     overflow: 'hidden',
   },
+  cardDark: {
+    backgroundColor: '#1E1E1E',
+  },
   image: {
     width: '100%',
     height: 150,
@@ -227,6 +256,9 @@ const styles = StyleSheet.create({
     color: Colors.text,
     marginBottom: 12,
   },
+  titleDark: {
+    color: Colors.white,
+  },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -236,6 +268,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textSecondary,
     marginLeft: 8,
+  },
+  detailTextDark: {
+    color: '#AAAAAA',
   },
   footer: {
     flexDirection: 'row',
@@ -266,6 +301,9 @@ const styles = StyleSheet.create({
     width: 200,
     marginRight: 12,
   },
+  compactCardDark: {
+    backgroundColor: '#1E1E1E',
+  },
   compactImage: {
     width: '100%',
     height: 100,
@@ -280,6 +318,9 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     height: 40,
   },
+  compactTitleDark: {
+    color: Colors.white,
+  },
   compactDetails: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -289,5 +330,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textSecondary,
     marginLeft: 4,
+  },
+  compactDetailTextDark: {
+    color: '#AAAAAA',
   },
 });

@@ -21,7 +21,7 @@ export default function HomeScreen() {
   const { location, locationName, loading: locationLoading } = useLocation();
   const { isDarkMode, use24HourFormat } = useThemeStore();
   
-  const { nearbyMosques, loading: mosquesLoading } = useMosques(
+  const { nearbyMosques, favoriteMosques, loading: mosquesLoading, refreshFavoriteMosques } = useMosques(
     location?.coords?.latitude,
     location?.coords?.longitude,
     10
@@ -56,10 +56,13 @@ export default function HomeScreen() {
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    refreshSavedEvents().then(() => {
+    Promise.all([
+      refreshSavedEvents(),
+      refreshFavoriteMosques()
+    ]).then(() => {
       setRefreshing(false);
     });
-  }, [refreshSavedEvents]);
+  }, [refreshSavedEvents, refreshFavoriteMosques]);
 
   const renderMosqueItem = ({ item }: { item: Mosque }) => (
     <MosqueCard mosque={item} compact />
@@ -77,6 +80,11 @@ export default function HomeScreen() {
   const handleSeeAllEvents = () => {
     // Navigate to the saved events screen instead of events tab
     router.push('/saved-events');
+  };
+
+  const handleSeeAllFavoriteMosques = () => {
+    // Navigate to the mosques tab with a filter for favorites
+    router.push('/mosques');
   };
 
   return (
@@ -185,6 +193,34 @@ export default function HomeScreen() {
               />
             )}
           </View>
+
+          {/* Favorite Mosques Section */}
+          {favoriteMosques.length > 0 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={[
+                  styles.sectionTitle,
+                  isDarkMode && styles.sectionTitleDark
+                ]}>Your Favorite Mosques</Text>
+                <TouchableOpacity 
+                  style={styles.seeAllButton}
+                  onPress={handleSeeAllFavoriteMosques}
+                >
+                  <Text style={styles.seeAllText}>See All</Text>
+                  <ChevronRight size={16} color={Colors.primary} />
+                </TouchableOpacity>
+              </View>
+
+              <FlatList
+                data={favoriteMosques}
+                renderItem={renderMosqueItem}
+                keyExtractor={(item) => item.id}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.horizontalListContent}
+              />
+            </View>
+          )}
 
           {/* Saved Events Section */}
           {savedEvents.length > 0 && (
