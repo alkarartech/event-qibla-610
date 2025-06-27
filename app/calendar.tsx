@@ -1118,7 +1118,7 @@ Location: ${event.mosque_name}`;
       >
         <View style={styles.eventModalOverlay}>
           <View style={[
-            styles.syncModalContent,
+            styles.eventModalContent,
             isDarkMode && styles.eventModalContentDark
           ]}>
             <View style={styles.eventModalHeader}>
@@ -1650,13 +1650,6 @@ const styles = StyleSheet.create({
   },
   userEventsSectionTitleDark: {
     color: Colors.white,
-  },
-  syncModalContent: {
-    backgroundColor: Colors.white,
-    borderRadius: 12,
-    width: '85%',
-    padding: 20,
-    ...globalStyles.shadow,
   },
   syncModalDescription: {
     fontSize: 16,
