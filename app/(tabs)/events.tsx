@@ -48,7 +48,7 @@ const languages = ['All', 'English', 'Arabic', 'Urdu', 'Farsi', 'Turkish'];
 const denominations = ['All', 'Sunni', 'Shia'];
 
 export default function EventsScreen() {
-  const params = useLocalSearchParams();
+  const params = useLocalSearchParams<{ filter?: string }>();
   const { location, locationName, loading: locationLoading } = useLocation();
   const { allEvents, nearbyEvents, savedEvents, loading: eventsLoading, refreshSavedEvents } = useEvents(
     location?.coords?.latitude,
@@ -272,6 +272,20 @@ export default function EventsScreen() {
     return option ? option.label : 'Relevance';
   };
 
+  // Handle date change for the date picker
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+    
+    if (selectedDate) {
+      setCustomDate(selectedDate);
+      if (Platform.OS === 'android') {
+        setShowTimeFilterModal(false);
+      }
+    }
+  };
+
   return (
     <View style={[
       styles.container, 
@@ -328,7 +342,13 @@ export default function EventsScreen() {
               styles.filterButton,
               isDarkMode && styles.filterButtonDark
             ]}
-            onPress={() => setShowTimeFilterModal(true)}
+            onPress={() => {
+              if (selectedTimeFilter === 'custom') {
+                setShowDatePicker(true);
+              } else {
+                setShowTimeFilterModal(true);
+              }
+            }}
           >
             <Calendar size={16} color={isDarkMode ? Colors.white : Colors.text} />
             <Text style={[
@@ -657,76 +677,17 @@ export default function EventsScreen() {
         </View>
       </Modal>
 
-      {/* Date Picker for Custom Date */}
+      {/* Date Picker for Custom Date - Now using spinner style instead of modal */}
       {showDatePicker && (
-        <Modal
-          transparent={true}
-          visible={showDatePicker}
-          animationType="fade"
-          onRequestClose={() => setShowDatePicker(false)}
-        >
-          <View style={styles.datePickerModalOverlay}>
-            <View style={[
-              styles.datePickerContainer,
-              isDarkMode && styles.datePickerContainerDark
-            ]}>
-              <View style={styles.datePickerHeader}>
-                <Text style={[
-                  styles.datePickerTitle,
-                  isDarkMode && styles.datePickerTitleDark
-                ]}>
-                  Select Date
-                </Text>
-              </View>
-              
-              {Platform.OS === 'ios' ? (
-                <DateTimePicker
-                  value={customDate}
-                  mode="date"
-                  display="spinner"
-                  onChange={(event, selectedDate) => {
-                    if (selectedDate) {
-                      setCustomDate(selectedDate);
-                    }
-                  }}
-                  style={styles.datePicker}
-                />
-              ) : (
-                <DateTimePicker
-                  value={customDate}
-                  mode="date"
-                  display="default"
-                  onChange={(event, selectedDate) => {
-                    setShowDatePicker(false);
-                    if (selectedDate) {
-                      setCustomDate(selectedDate);
-                    }
-                  }}
-                />
-              )}
-              
-              {Platform.OS === 'ios' && (
-                <View style={styles.datePickerButtons}>
-                  <TouchableOpacity
-                    style={styles.datePickerCancelButton}
-                    onPress={() => setShowDatePicker(false)}
-                  >
-                    <Text style={styles.datePickerButtonText}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.datePickerConfirmButton}
-                    onPress={() => {
-                      setShowDatePicker(false);
-                      setShowTimeFilterModal(false);
-                    }}
-                  >
-                    <Text style={styles.datePickerButtonText}>Confirm</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-          </View>
-        </Modal>
+        <DateTimePicker
+          value={customDate}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={handleDateChange}
+          style={styles.datePicker}
+          positiveButton={{label: 'OK', textColor: Colors.primary}}
+          negativeButton={{label: 'Cancel', textColor: Colors.textSecondary}}
+        />
       )}
     </View>
   );
@@ -969,55 +930,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 16,
   },
-  datePickerModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  datePickerContainer: {
-    backgroundColor: Colors.white,
-    borderRadius: 12,
-    padding: 16,
-    width: '80%',
-  },
-  datePickerContainerDark: {
-    backgroundColor: '#1e1e1e',
-  },
-  datePickerHeader: {
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  datePickerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.text,
-  },
-  datePickerTitleDark: {
-    color: Colors.white,
-  },
   datePicker: {
     width: '100%',
-  },
-  datePickerButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 16,
-  },
-  datePickerCancelButton: {
-    backgroundColor: '#f44336',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-  },
-  datePickerConfirmButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-  },
-  datePickerButtonText: {
-    color: Colors.white,
-    fontWeight: '600',
+    backgroundColor: Platform.OS === 'ios' ? Colors.white : 'transparent',
   },
 });

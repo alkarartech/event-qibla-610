@@ -235,7 +235,10 @@ export default function useEvents(
             body: `Don't forget: ${event.title} at ${event.mosque_name} tomorrow at ${event.time}`,
             data: { eventId },
           },
-          trigger: { date: dayBeforeDate }, // Fixed: Use object with date property
+          trigger: { 
+            type: 'date',
+            date: dayBeforeDate 
+          },
         });
         notificationIds.push(dayBeforeId);
       }
@@ -247,7 +250,10 @@ export default function useEvents(
             body: `Reminder: ${event.title} at ${event.mosque_name} starts in 2 hours`,
             data: { eventId },
           },
-          trigger: { date: twoHoursBeforeDate }, // Fixed: Use object with date property
+          trigger: { 
+            type: 'date',
+            date: twoHoursBeforeDate 
+          },
         });
         notificationIds.push(twoHoursBeforeId);
       }

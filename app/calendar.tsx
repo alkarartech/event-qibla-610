@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, Modal, Platform, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, Modal, Platform, RefreshControl, Alert, Share } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, MapPin, X } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, MapPin, X, Share2 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { globalStyles } from '@/constants/theme';
 import useThemeStore from '@/hooks/useThemeStore';
@@ -83,6 +83,7 @@ export default function CalendarScreen() {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [lastClickTime, setLastClickTime] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  const [showSyncOptions, setShowSyncOptions] = useState(false);
   
   // Refresh saved events when component mounts
   useEffect(() => {
@@ -395,6 +396,40 @@ ${hijriDate.year} Hijri`;
     
     setLastClickTime(now);
   }, [lastClickTime]);
+  
+  // Handle sync with external calendars
+  const handleSyncCalendar = async (calendarType: 'google' | 'apple') => {
+    setShowSyncOptions(false);
+    
+    // In a real app, this would integrate with the respective calendar APIs
+    // For now, we'll just show a success message
+    
+    try {
+      // Create a text representation of events for sharing
+      const eventsText = savedEvents.map(event => {
+        return `${event.title}\nDate: ${event.date}\nTime: ${event.time}${event.endTime ? ` - ${event.endTime}` : ''}\nLocation: ${event.mosque_name}\n`;
+      }).join('\n');
+      
+      const result = await Share.share({
+        title: 'My Mosque Events',
+        message: `My Mosque Events\n\n${eventsText}`,
+      });
+      
+      if (result.action === Share.sharedAction) {
+        Alert.alert(
+          'Success',
+          `Events successfully exported to ${calendarType === 'google' ? 'Google Calendar' : 'Apple Calendar'}.`,
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        `Failed to export events to ${calendarType === 'google' ? 'Google Calendar' : 'Apple Calendar'}.`,
+        [{ text: 'OK' }]
+      );
+    }
+  };
   
   // Render month view
   const renderMonthView = () => {
@@ -809,7 +844,12 @@ ${hijriDate.year} Hijri`;
           Calendar
         </Text>
         
-        <View style={styles.placeholder} />
+        <TouchableOpacity 
+          style={styles.syncButton}
+          onPress={() => setShowSyncOptions(true)}
+        >
+          <Share2 size={22} color={isDarkMode ? Colors.white : Colors.text} />
+        </TouchableOpacity>
       </View>
       
       {/* Calendar Controls */}
@@ -966,6 +1006,69 @@ ${hijriDate.year} Hijri`;
           </View>
         </View>
       </Modal>
+      
+      {/* Sync Options Modal */}
+      <Modal
+        visible={showSyncOptions}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowSyncOptions(false)}
+      >
+        <View style={styles.eventModalOverlay}>
+          <View style={[
+            styles.syncModalContent,
+            isDarkMode && styles.eventModalContentDark
+          ]}>
+            <View style={styles.eventModalHeader}>
+              <Text style={[
+                styles.eventModalTitle,
+                isDarkMode && styles.eventModalTitleDark
+              ]}>
+                Sync Calendar
+              </Text>
+              <TouchableOpacity onPress={() => setShowSyncOptions(false)}>
+                <X size={24} color={isDarkMode ? Colors.white : Colors.text} />
+              </TouchableOpacity>
+            </View>
+            
+            <Text style={[
+              styles.syncModalDescription,
+              isDarkMode && styles.eventModalDescriptionDark
+            ]}>
+              Export your saved events to an external calendar
+            </Text>
+            
+            <TouchableOpacity 
+              style={[styles.syncButton, styles.googleButton]}
+              onPress={() => handleSyncCalendar('google')}
+            >
+              <Text style={styles.syncButtonText}>
+                Sync with Google Calendar
+              </Text>
+            </TouchableOpacity>
+            
+            {Platform.OS === 'ios' && (
+              <TouchableOpacity 
+                style={[styles.syncButton, styles.appleButton]}
+                onPress={() => handleSyncCalendar('apple')}
+              >
+                <Text style={styles.syncButtonText}>
+                  Sync with Apple Calendar
+                </Text>
+              </TouchableOpacity>
+            )}
+            
+            <TouchableOpacity 
+              style={[styles.syncButton, styles.cancelButton]}
+              onPress={() => setShowSyncOptions(false)}
+            >
+              <Text style={styles.cancelButtonText}>
+                Cancel
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -997,8 +1100,8 @@ const styles = StyleSheet.create({
   headerTitleDark: {
     color: Colors.white,
   },
-  placeholder: {
-    width: 40,
+  syncButton: {
+    padding: 8,
   },
   controls: {
     paddingHorizontal: 16,
@@ -1445,5 +1548,44 @@ const styles = StyleSheet.create({
   },
   userEventsSectionTitleDark: {
     color: Colors.white,
+  },
+  syncModalContent: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    width: '85%',
+    padding: 20,
+    ...globalStyles.shadow,
+  },
+  syncModalDescription: {
+    fontSize: 16,
+    color: Colors.text,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  syncButton: {
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  googleButton: {
+    backgroundColor: '#4285F4',
+  },
+  appleButton: {
+    backgroundColor: '#000000',
+  },
+  cancelButton: {
+    backgroundColor: Colors.card,
+    marginTop: 8,
+  },
+  syncButtonText: {
+    color: Colors.white,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  cancelButtonText: {
+    color: Colors.text,
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

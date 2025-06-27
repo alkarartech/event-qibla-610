@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Calendar, Clock, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { Calendar, Clock, ChevronDown, ChevronUp, ChevronLeft } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { globalStyles } from '@/constants/theme';
 import EventCard from '@/components/EventCard';
@@ -42,10 +42,17 @@ export default function SavedEventsScreen() {
       isDarkMode && styles.containerDark
     ]}>
       <View style={styles.headerContainer}>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <ChevronLeft size={24} color={isDarkMode ? Colors.white : Colors.text} />
+        </TouchableOpacity>
         <Text style={[
           styles.headerTitle,
           isDarkMode && styles.headerTitleDark
         ]}>Your Saved Events</Text>
+        <View style={styles.placeholder} />
       </View>
       
       {loading ? (
@@ -124,18 +131,27 @@ const styles = StyleSheet.create({
     backgroundColor: '#121212',
   },
   headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
+  backButton: {
+    padding: 8,
+  },
   headerTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
     color: Colors.text,
   },
   headerTitleDark: {
     color: Colors.white,
+  },
+  placeholder: {
+    width: 40,
   },
   listContent: {
     paddingHorizontal: 16,
