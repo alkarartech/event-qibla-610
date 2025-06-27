@@ -90,7 +90,7 @@ export default function MosquesScreen() {
     setFilteredMosques(mosques);
   }, [searchQuery, allMosques, favoriteMosques, filterSettings, sortBy, location, showFavoritesOnly]);
 
-  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
     const R = 6371; // Radius of the earth in km
     const dLat = deg2rad(lat2 - lat1);
     const dLon = deg2rad(lon2 - lon1);
@@ -105,7 +105,7 @@ export default function MosquesScreen() {
     return distance;
   };
 
-  const deg2rad = (deg) => {
+  const deg2rad = (deg: number): number => {
     return deg * (Math.PI / 180);
   };
 
@@ -113,7 +113,7 @@ export default function MosquesScreen() {
     setSearchQuery('');
   };
 
-  const handleLocationSelect = (location) => {
+  const handleLocationSelect = (location: string) => {
     setCustomLocation(location);
     // In a real app, this would trigger a location-based search
   };

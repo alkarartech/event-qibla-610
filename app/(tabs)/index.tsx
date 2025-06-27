@@ -194,34 +194,6 @@ export default function HomeScreen() {
             )}
           </View>
 
-          {/* Favorite Mosques Section */}
-          {favoriteMosques.length > 0 && (
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={[
-                  styles.sectionTitle,
-                  isDarkMode && styles.sectionTitleDark
-                ]}>Your Favorite Mosques</Text>
-                <TouchableOpacity 
-                  style={styles.seeAllButton}
-                  onPress={handleSeeAllFavoriteMosques}
-                >
-                  <Text style={styles.seeAllText}>See All</Text>
-                  <ChevronRight size={16} color={Colors.primary} />
-                </TouchableOpacity>
-              </View>
-
-              <FlatList
-                data={favoriteMosques}
-                renderItem={renderMosqueItem}
-                keyExtractor={(item) => item.id}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.horizontalListContent}
-              />
-            </View>
-          )}
-
           {/* Saved Events Section */}
           {savedEvents.length > 0 && (
             <View style={styles.section}>
@@ -242,6 +214,34 @@ export default function HomeScreen() {
               <FlatList
                 data={savedEvents.slice(0, 5)}
                 renderItem={renderEventItem}
+                keyExtractor={(item) => item.id}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.horizontalListContent}
+              />
+            </View>
+          )}
+
+          {/* Favorite Mosques Section - Moved below saved events as requested */}
+          {favoriteMosques.length > 0 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={[
+                  styles.sectionTitle,
+                  isDarkMode && styles.sectionTitleDark
+                ]}>Your Favorite Mosques</Text>
+                <TouchableOpacity 
+                  style={styles.seeAllButton}
+                  onPress={handleSeeAllFavoriteMosques}
+                >
+                  <Text style={styles.seeAllText}>See All</Text>
+                  <ChevronRight size={16} color={Colors.primary} />
+                </TouchableOpacity>
+              </View>
+
+              <FlatList
+                data={favoriteMosques}
+                renderItem={renderMosqueItem}
                 keyExtractor={(item) => item.id}
                 horizontal
                 showsHorizontalScrollIndicator={false}
