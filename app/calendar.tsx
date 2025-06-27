@@ -1135,7 +1135,7 @@ Location: ${event.mosque_name}`;
             
             <Text style={[
               styles.syncModalDescription,
-              isDarkMode && styles.eventModalDescriptionDark
+              isDarkMode && styles.syncModalDescriptionDark
             ]}>
               Export your saved events to an external calendar
             </Text>
@@ -1656,6 +1656,9 @@ const styles = StyleSheet.create({
     color: Colors.text,
     marginBottom: 20,
     textAlign: 'center',
+  },
+  syncModalDescriptionDark: {
+    color: '#DDDDDD',
   },
   syncButton: {
     paddingVertical: 14,
