@@ -947,7 +947,7 @@ Location: ${event.mosque_name}`;
         </Text>
         
         <TouchableOpacity 
-          style={styles.syncButton}
+          style={styles.headerSyncButton}
           onPress={() => setShowSyncOptions(true)}
         >
           <Share2 size={22} color={isDarkMode ? Colors.white : Colors.text} />
@@ -1141,7 +1141,7 @@ Location: ${event.mosque_name}`;
             </Text>
             
             <TouchableOpacity 
-              style={[styles.syncButton, styles.googleButton]}
+              style={[styles.calendarSyncButton, styles.googleButton]}
               onPress={() => handleSyncCalendar('google')}
             >
               <Text style={styles.syncButtonText}>
@@ -1151,7 +1151,7 @@ Location: ${event.mosque_name}`;
             
             {Platform.OS === 'ios' && (
               <TouchableOpacity 
-                style={[styles.syncButton, styles.appleButton]}
+                style={[styles.calendarSyncButton, styles.appleButton]}
                 onPress={() => handleSyncCalendar('apple')}
               >
                 <Text style={styles.syncButtonText}>
@@ -1161,7 +1161,7 @@ Location: ${event.mosque_name}`;
             )}
             
             <TouchableOpacity 
-              style={[styles.syncButton, styles.cancelButton]}
+              style={[styles.calendarSyncButton, styles.cancelButton]}
               onPress={() => setShowSyncOptions(false)}
             >
               <Text style={styles.cancelButtonText}>
@@ -1202,7 +1202,7 @@ const styles = StyleSheet.create({
   headerTitleDark: {
     color: Colors.white,
   },
-  syncButton: {
+  headerSyncButton: {
     padding: 8,
   },
   controls: {
@@ -1660,7 +1660,7 @@ const styles = StyleSheet.create({
   syncModalDescriptionDark: {
     color: '#DDDDDD',
   },
-  syncButton: {
+  calendarSyncButton: {
     paddingVertical: 14,
     borderRadius: 8,
     alignItems: 'center',
