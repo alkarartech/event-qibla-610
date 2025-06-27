@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, Platform, TextInput, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, Platform, TextInput, RefreshControl, Linking } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { MapPin, Filter, Calendar, ChevronDown, ChevronRight, X, ArrowDownUp } from 'lucide-react-native';
 import Colors from '@/constants/colors';
@@ -274,15 +274,12 @@ export default function EventsScreen() {
 
   // Handle date change for the date picker
   const handleDateChange = (event: any, selectedDate?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowDatePicker(false);
-    }
+    setShowDatePicker(false);
     
     if (selectedDate) {
       setCustomDate(selectedDate);
-      if (Platform.OS === 'android') {
-        setShowTimeFilterModal(false);
-      }
+      setSelectedTimeFilter('custom');
+      setShowTimeFilterModal(false);
     }
   };
 
@@ -677,7 +674,7 @@ export default function EventsScreen() {
         </View>
       </Modal>
 
-      {/* Date Picker for Custom Date - Now using spinner style instead of modal */}
+      {/* Date Picker for Custom Date */}
       {showDatePicker && (
         <DateTimePicker
           value={customDate}

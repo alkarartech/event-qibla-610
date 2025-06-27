@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, Modal, Platform, RefreshControl, Alert, Share } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, Modal, Platform, RefreshControl, Alert, Share, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, MapPin, X, Share2 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
@@ -401,27 +401,58 @@ ${hijriDate.year} Hijri`;
   const handleSyncCalendar = async (calendarType: 'google' | 'apple') => {
     setShowSyncOptions(false);
     
-    // In a real app, this would integrate with the respective calendar APIs
-    // For now, we'll just show a success message
-    
     try {
       // Create a text representation of events for sharing
       const eventsText = savedEvents.map(event => {
-        return `${event.title}\nDate: ${event.date}\nTime: ${event.time}${event.endTime ? ` - ${event.endTime}` : ''}\nLocation: ${event.mosque_name}\n`;
+        return `${event.title}
+Date: ${event.date}
+Time: ${event.time}${event.endTime ? ` - ${event.endTime}` : ''}
+Location: ${event.mosque_name}
+`;
       }).join('\n');
       
-      const result = await Share.share({
-        title: 'My Mosque Events',
-        message: `My Mosque Events\n\n${eventsText}`,
-      });
-      
-      if (result.action === Share.sharedAction) {
-        Alert.alert(
-          'Success',
-          `Events successfully exported to ${calendarType === 'google' ? 'Google Calendar' : 'Apple Calendar'}.`,
-          [{ text: 'OK' }]
-        );
+      // Attempt to open the appropriate calendar app
+      if (calendarType === 'google') {
+        // Google Calendar URL scheme
+        const url = 'https://calendar.google.com/calendar/';
+        const canOpen = await Linking.canOpenURL(url);
+        
+        if (canOpen) {
+          await Linking.openURL(url);
+        } else {
+          // Fallback to sharing if can't open the app
+          await Share.share({
+            title: 'My Mosque Events',
+            message: `My Mosque Events\n\n${eventsText}`,
+          });
+        }
+      } else if (calendarType === 'apple' && Platform.OS === 'ios') {
+        // Apple Calendar URL scheme
+        const url = 'calshow://';
+        const canOpen = await Linking.canOpenURL(url);
+        
+        if (canOpen) {
+          await Linking.openURL(url);
+        } else {
+          // Fallback to sharing if can't open the app
+          await Share.share({
+            title: 'My Mosque Events',
+            message: `My Mosque Events\n\n${eventsText}`,
+          });
+        }
+      } else {
+        // Fallback for other platforms
+        await Share.share({
+          title: 'My Mosque Events',
+          message: `My Mosque Events\n\n${eventsText}`,
+        });
       }
+      
+      Alert.alert(
+        'Calendar Sync',
+        `Events have been prepared for export to ${calendarType === 'google' ? 'Google Calendar' : 'Apple Calendar'}. Please follow the instructions in the calendar app to import them.`,
+        [{ text: 'OK' }]
+      );
     } catch (error) {
       Alert.alert(
         'Error',

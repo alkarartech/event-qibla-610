@@ -235,10 +235,7 @@ export default function useEvents(
             body: `Don't forget: ${event.title} at ${event.mosque_name} tomorrow at ${event.time}`,
             data: { eventId },
           },
-          trigger: { 
-            type: 'date',
-            date: dayBeforeDate 
-          },
+          trigger: dayBeforeDate, // Simplified trigger format for Expo SDK 52
         });
         notificationIds.push(dayBeforeId);
       }
@@ -250,10 +247,7 @@ export default function useEvents(
             body: `Reminder: ${event.title} at ${event.mosque_name} starts in 2 hours`,
             data: { eventId },
           },
-          trigger: { 
-            type: 'date',
-            date: twoHoursBeforeDate 
-          },
+          trigger: twoHoursBeforeDate, // Simplified trigger format for Expo SDK 52
         });
         notificationIds.push(twoHoursBeforeId);
       }
