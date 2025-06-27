@@ -502,16 +502,12 @@ ${hijriDate.year} Hijri`;
             return `${event.title}
 Date: ${event.date}
 Time: ${event.time}${event.endTime ? ` - ${event.endTime}` : ''}
-Location: ${event.mosque_name}
-`;
-          }).join('
-');
+Location: ${event.mosque_name}`;
+          }).join('\n\n');
           
           await Share.share({
             title: 'My Mosque Events',
-            message: `My Mosque Events
-
-${eventsText}`,
+            message: `My Mosque Events\n\n${eventsText}`
           });
         }
       } else {
@@ -520,16 +516,12 @@ ${eventsText}`,
           return `${event.title}
 Date: ${event.date}
 Time: ${event.time}${event.endTime ? ` - ${event.endTime}` : ''}
-Location: ${event.mosque_name}
-`;
-        }).join('
-');
+Location: ${event.mosque_name}`;
+        }).join('\n\n');
         
         await Share.share({
           title: 'My Mosque Events',
-          message: `My Mosque Events
-
-${eventsText}`,
+          message: `My Mosque Events\n\n${eventsText}`
         });
       }
     } catch (error) {
