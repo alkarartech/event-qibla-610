@@ -12,9 +12,10 @@ interface EventCardProps {
   event: Event;
   showDistance?: boolean;
   distance?: number;
+  compact?: boolean;
 }
 
-export default function EventCard({ event, showDistance, distance }: EventCardProps) {
+export default function EventCard({ event, showDistance, distance, compact }: EventCardProps) {
   const router = useRouter();
   const { isEventSaved, saveEvent, unsaveEvent, hasEventNotifications, scheduleEventNotifications, cancelEventNotifications } = useEvents();
   const { use24HourFormat, isDarkMode, getText } = useThemeStore();
