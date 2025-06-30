@@ -25,7 +25,7 @@ const useThemeStore = create<ThemeState>()(
       language: 'en',
       toggleDarkMode: () => set((state) => ({ isDarkMode: !state.isDarkMode })),
       toggleTimeFormat: () => set((state) => ({ use24HourFormat: !state.use24HourFormat })),
-      setLanguage: (lang) => set({ language: lang as Language }),
+      setLanguage: (lang) => set({ language: lang }),
       getColors: () => {
         const { isDarkMode } = get();
         if (isDarkMode) {
@@ -47,10 +47,10 @@ const useThemeStore = create<ThemeState>()(
       getText: (key) => {
         const { language } = get();
         // Get the translations for the current language
-        const langTranslations = translations[language] || translations.en;
+        const langTranslations = translations[language] || translations['en'];
         
         // Return the translation or fallback to English or the key itself
-        return langTranslations[key] || translations.en[key] || key;
+        return langTranslations[key] || translations['en'][key] || key;
       }
     }),
     {

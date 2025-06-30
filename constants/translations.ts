@@ -4,11 +4,7 @@ interface TranslationDictionary {
   [key: string]: string;
 }
 
-interface Translations {
-  [key in Language]: TranslationDictionary;
-}
-
-const translations: Translations = {
+const translations: Record<Language, TranslationDictionary> = {
   en: {
     // Common
     welcome: 'Assalamu Alaikum',
@@ -200,7 +196,7 @@ const translations: Translations = {
     other: 'دیگر',
     language: 'زبان',
     denomination: 'مسلک',
-    proximity: 'قربت (کلومیٹر)',
+    proximity: 'قربت (کیلومیٹر)',
     savedEventsOnly: 'صرف محفوظ شدہ تقریبات دکھائیں',
     noEventsFound: 'کوئی تقریب نہیں ملی',
     noEventsFoundMessage: 'ہم آپ کے فلٹرز سے مطابقت رکھنے والی کوئی تقریب نہیں پا سکے۔',
