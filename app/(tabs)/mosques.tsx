@@ -15,18 +15,18 @@ import useThemeStore from '@/hooks/useThemeStore';
 import { Mosque } from '@/mocks/mosques';
 
 export default function MosquesScreen() {
-  const { location, locationName, loading: locationLoading } = useLocation();
+  const { location, locationName, loading: locationLoading, error: locationError } = useLocation();
   const { 
     allMosques, 
     nearbyMosques, 
     favoriteMosques,
     loading: mosquesLoading 
   } = useMosques(
-    location?.coords.latitude,
-    location?.coords.longitude,
+    location?.coords?.latitude,
+    location?.coords?.longitude,
     10
   );
-  const { isDarkMode } = useThemeStore();
+  const { isDarkMode, getText } = useThemeStore();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredMosques, setFilteredMosques] = useState(allMosques);
@@ -141,12 +141,18 @@ export default function MosquesScreen() {
         />
       </View>
 
+      {locationError && (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{locationError}</Text>
+        </View>
+      )}
+
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <SearchBar
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholder="Search mosques by name or address"
+          placeholder={getText('search')}
           onClear={clearSearch}
         />
         
@@ -168,7 +174,7 @@ export default function MosquesScreen() {
               styles.filterButtonText,
               isDarkMode && styles.filterButtonTextDark,
               showFavoritesOnly && styles.activeFilterText
-            ]}>Favorites</Text>
+            ]}>{getText('favoriteMosques')}</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -182,7 +188,7 @@ export default function MosquesScreen() {
               styles.filterButtonText,
               isDarkMode && styles.filterButtonTextDark,
               sortBy === 'distance' && styles.activeFilterText
-            ]}>Sort: {sortBy === 'distance' ? 'Distance' : 'Relevance'}</Text>
+            ]}>{getText('sort')}: {sortBy === 'distance' ? 'Distance' : 'Relevance'}</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -196,7 +202,7 @@ export default function MosquesScreen() {
             <Text style={[
               styles.filterButtonText,
               isDarkMode && styles.filterButtonTextDark
-            ]}>Filter</Text>
+            ]}>{getText('filter')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -211,13 +217,13 @@ export default function MosquesScreen() {
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={
             <EmptyState
-              title={showFavoritesOnly ? "No Favorite Mosques" : "No Mosques Found"}
+              title={showFavoritesOnly ? getText('noFavoriteMosquesMessage') : getText('noMosquesFound')}
               message={
                 showFavoritesOnly
-                  ? "You haven't added any mosques to your favorites yet."
+                  ? getText('noFavoriteMosquesMessage')
                   : searchQuery
-                    ? "We couldn't find any mosques matching your search."
-                    : "We couldn't find any mosques near your current location."
+                    ? getText('noMosquesSearchMessage')
+                    : getText('noMosquesFoundMessage')
               }
             />
           }
@@ -548,5 +554,18 @@ const styles = StyleSheet.create({
     color: Colors.text,
     fontWeight: '600',
     fontSize: 16,
+  },
+  errorContainer: {
+    backgroundColor: '#ffebee',
+    padding: 12,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#f44336',
+  },
+  errorText: {
+    color: '#d32f2f',
+    fontSize: 14,
   },
 });

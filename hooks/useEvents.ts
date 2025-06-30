@@ -3,7 +3,7 @@ import { events, Event } from '@/mocks/events';
 import { calculateDistance } from '@/utils/location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
+import { Platform, Alert } from 'react-native';
 
 interface EventsState {
   allEvents: Event[];
@@ -25,6 +25,12 @@ interface EventNotification {
   notificationIds: string[];
 }
 
+interface EventFeedback {
+  eventId: string;
+  hasGivenFeedback: boolean;
+  lastPromptDate?: string;
+}
+
 export default function useEvents(
   latitude?: number,
   longitude?: number,
@@ -40,17 +46,22 @@ export default function useEvents(
   
   const [eventRatings, setEventRatings] = useState<EventRating[]>([]);
   const [eventNotifications, setEventNotifications] = useState<EventNotification[]>([]);
+  const [eventFeedbacks, setEventFeedbacks] = useState<EventFeedback[]>([]);
 
   // Load saved events on mount
   useEffect(() => {
     loadSavedEvents();
     loadEventRatings();
     loadEventNotifications();
+    loadEventFeedbacks();
     
     // Set up notification handler
     if (Platform.OS !== 'web') {
       setupNotifications();
     }
+    
+    // Check for past events that need feedback
+    checkPastEventsForFeedback();
   }, []);
   
   // Setup notifications
@@ -115,6 +126,18 @@ export default function useEvents(
       }
     } catch (error) {
       console.error('Error loading event notifications:', error);
+    }
+  };
+  
+  // Load event feedbacks from AsyncStorage
+  const loadEventFeedbacks = async () => {
+    try {
+      const feedbacksData = await AsyncStorage.getItem('eventFeedbacks');
+      if (feedbacksData) {
+        setEventFeedbacks(JSON.parse(feedbacksData));
+      }
+    } catch (error) {
+      console.error('Error loading event feedbacks:', error);
     }
   };
 
@@ -256,6 +279,24 @@ export default function useEvents(
         notificationIds.push(twoHoursBeforeId);
       }
       
+      // Schedule a post-event feedback notification
+      const postEventDate = new Date(eventDate);
+      postEventDate.setHours(postEventDate.getHours() + 3); // 3 hours after event starts
+      
+      if (postEventDate > now) {
+        const postEventId = await Notifications.scheduleNotificationAsync({
+          content: {
+            title: 'How was the event?',
+            body: `We'd love to hear your feedback about ${event.title}`,
+            data: { eventId, type: 'feedback' },
+          },
+          trigger: {
+            seconds: Math.floor((postEventDate.getTime() - now.getTime()) / 1000),
+          },
+        });
+        notificationIds.push(postEventId);
+      }
+      
       // Save notification IDs
       if (notificationIds.length > 0) {
         const updatedNotifications = [...eventNotifications];
@@ -330,10 +371,106 @@ export default function useEvents(
       // Update state
       setEventRatings(newRatings);
       
+      // Mark event as having received feedback
+      await markEventFeedbackGiven(eventId);
+      
       return true;
     } catch (error) {
       console.error('Error rating event:', error);
       return false;
+    }
+  };
+  
+  // Mark event as having received feedback
+  const markEventFeedbackGiven = async (eventId: string) => {
+    try {
+      const updatedFeedbacks = [...eventFeedbacks];
+      const existingIndex = updatedFeedbacks.findIndex(f => f.eventId === eventId);
+      
+      if (existingIndex >= 0) {
+        updatedFeedbacks[existingIndex].hasGivenFeedback = true;
+        updatedFeedbacks[existingIndex].lastPromptDate = new Date().toISOString();
+      } else {
+        updatedFeedbacks.push({
+          eventId,
+          hasGivenFeedback: true,
+          lastPromptDate: new Date().toISOString()
+        });
+      }
+      
+      setEventFeedbacks(updatedFeedbacks);
+      await AsyncStorage.setItem('eventFeedbacks', JSON.stringify(updatedFeedbacks));
+      
+      return true;
+    } catch (error) {
+      console.error('Error marking event feedback:', error);
+      return false;
+    }
+  };
+  
+  // Check if event needs feedback
+  const needsFeedback = (eventId: string): boolean => {
+    const feedback = eventFeedbacks.find(f => f.eventId === eventId);
+    if (!feedback) return true;
+    return !feedback.hasGivenFeedback;
+  };
+  
+  // Check for past events that need feedback
+  const checkPastEventsForFeedback = () => {
+    const now = new Date();
+    const pastEvents = state.savedEvents.filter(event => {
+      const eventDate = new Date(event.date);
+      return eventDate < now && needsFeedback(event.id);
+    });
+    
+    if (pastEvents.length > 0 && Platform.OS !== 'web') {
+      // Show feedback prompt for the most recent past event
+      const mostRecentEvent = pastEvents.sort((a, b) => 
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      )[0];
+      
+      // Check if we've already prompted for this event recently
+      const eventFeedback = eventFeedbacks.find(f => f.eventId === mostRecentEvent.id);
+      const lastPromptDate = eventFeedback?.lastPromptDate ? new Date(eventFeedback.lastPromptDate) : null;
+      
+      // Only prompt if we haven't prompted in the last 24 hours
+      if (!lastPromptDate || (now.getTime() - lastPromptDate.getTime() > 24 * 60 * 60 * 1000)) {
+        setTimeout(() => {
+          Alert.alert(
+            'Event Feedback',
+            `How was your experience at ${mostRecentEvent.title}?`,
+            [
+              {
+                text: 'Rate Now',
+                onPress: () => {
+                  // Navigate to event details page
+                  // In a real app, we would use navigation here
+                  // For now, we'll just mark it as prompted
+                  const updatedFeedbacks = [...eventFeedbacks];
+                  const existingIndex = updatedFeedbacks.findIndex(f => f.eventId === mostRecentEvent.id);
+                  
+                  if (existingIndex >= 0) {
+                    updatedFeedbacks[existingIndex].lastPromptDate = now.toISOString();
+                  } else {
+                    updatedFeedbacks.push({
+                      eventId: mostRecentEvent.id,
+                      hasGivenFeedback: false,
+                      lastPromptDate: now.toISOString()
+                    });
+                  }
+                  
+                  setEventFeedbacks(updatedFeedbacks);
+                  AsyncStorage.setItem('eventFeedbacks', JSON.stringify(updatedFeedbacks));
+                }
+              },
+              {
+                text: 'Later',
+                style: 'cancel'
+              }
+            ]
+          );
+        }, 2000); // Show after a short delay
+      }
     }
   };
   
@@ -403,5 +540,7 @@ export default function useEvents(
     scheduleEventNotifications,
     cancelEventNotifications,
     hasEventNotifications,
+    needsFeedback,
+    markEventFeedbackGiven,
   };
 }

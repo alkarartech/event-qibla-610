@@ -48,13 +48,13 @@ const denominations = ['All', 'Sunni', 'Shia'];
 
 export default function EventsScreen() {
   const params = useLocalSearchParams<{ filter?: string }>();
-  const { location, locationName, loading: locationLoading } = useLocation();
+  const { location, locationName, loading: locationLoading, error: locationError } = useLocation();
   const { allEvents, nearbyEvents, savedEvents, loading: eventsLoading, refreshSavedEvents } = useEvents(
     location?.coords?.latitude,
     location?.coords?.longitude,
     10
   );
-  const { isDarkMode } = useThemeStore();
+  const { isDarkMode, getText } = useThemeStore();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredEvents, setFilteredEvents] = useState<any[]>([]);
@@ -314,12 +314,18 @@ export default function EventsScreen() {
         />
       </View>
 
+      {locationError && (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{locationError}</Text>
+        </View>
+      )}
+
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <SearchBar
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholder="Search events"
+          placeholder={getText('search')}
           onClear={clearSearch}
         />
         
@@ -335,7 +341,7 @@ export default function EventsScreen() {
             <Text style={[
               styles.filterButtonText,
               isDarkMode && styles.filterButtonTextDark
-            ]}>Sort: {getSelectedSortLabel()}</Text>
+            ]}>{getText('sort')}: {getSelectedSortLabel()}</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -349,7 +355,7 @@ export default function EventsScreen() {
             <Text style={[
               styles.filterButtonText,
               isDarkMode && styles.filterButtonTextDark
-            ]}>Filter</Text>
+            ]}>{getText('filter')}</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -394,13 +400,13 @@ export default function EventsScreen() {
           }
           ListEmptyComponent={
             <EmptyState
-              title="No Events Found"
+              title={getText('noEventsFound')}
               message={
                 searchQuery
-                  ? "We couldn't find any events matching your search."
+                  ? getText('noSearchResultsMessage')
                   : filterSettings.saved
-                  ? "You haven't saved any events yet."
-                  : "We couldn't find any events matching your filters."
+                  ? getText('noSavedEventsMessage')
+                  : getText('noEventsFoundMessage')
               }
             />
           }
@@ -425,7 +431,7 @@ export default function EventsScreen() {
                 isDarkMode && styles.modalTitleDark
               ]}>Select Time</Text>
               <TouchableOpacity onPress={() => setShowTimeFilterModal(false)}>
-                <Text style={styles.modalCloseButton}>Close</Text>
+                <Text style={styles.modalCloseButton}>{getText('close')}</Text>
               </TouchableOpacity>
             </View>
             
@@ -450,7 +456,7 @@ export default function EventsScreen() {
           <View style={[
             styles.modalContent,
             isDarkMode && styles.modalContentDark,
-            { height: 240 } // Increased height for better spacing
+            { height: 280 } // Increased height for better spacing
           ]}>
             <View style={styles.modalHeader}>
               <Text style={[
@@ -458,7 +464,7 @@ export default function EventsScreen() {
                 isDarkMode && styles.modalTitleDark
               ]}>Enter Date</Text>
               <TouchableOpacity onPress={() => setShowCustomDateInput(false)}>
-                <Text style={styles.modalCloseButton}>Cancel</Text>
+                <Text style={styles.modalCloseButton}>{getText('cancel')}</Text>
               </TouchableOpacity>
             </View>
             
@@ -487,7 +493,7 @@ export default function EventsScreen() {
                 onPress={handleCustomDateSubmit}
               >
                 <Text style={styles.customDateSubmitButtonText}>
-                  Apply
+                  {getText('apply')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -512,9 +518,9 @@ export default function EventsScreen() {
               <Text style={[
                 styles.modalTitle,
                 isDarkMode && styles.modalTitleDark
-              ]}>Sort By</Text>
+              ]}>{getText('sort')}</Text>
               <TouchableOpacity onPress={() => setShowSortModal(false)}>
-                <Text style={styles.modalCloseButton}>Close</Text>
+                <Text style={styles.modalCloseButton}>{getText('close')}</Text>
               </TouchableOpacity>
             </View>
             
@@ -563,23 +569,26 @@ export default function EventsScreen() {
             <Text style={[
               styles.modalTitle,
               isDarkMode && styles.modalTitleDark
-            ]}>Filter Events</Text>
+            ]}>{getText('filter')}</Text>
             <TouchableOpacity onPress={() => setShowFilterModal(false)}>
-              <Text style={styles.modalCloseButton}>Close</Text>
+              <Text style={styles.modalCloseButton}>{getText('close')}</Text>
             </TouchableOpacity>
           </View>
           
           <FlatList
             data={[1]} // Dummy data to render once
             keyExtractor={() => "filters"}
-            contentContainerStyle={styles.filterListContent}
+            contentContainerStyle={[
+              styles.filterListContent,
+              { paddingTop: 30 } // Added more top padding
+            ]}
             renderItem={() => (
               <>
                 <View style={styles.filterSection}>
                   <Text style={[
                     styles.filterSectionTitle,
                     isDarkMode && styles.filterSectionTitleDark
-                  ]}>Event Type</Text>
+                  ]}>{getText('eventType')}</Text>
                   
                   <View style={styles.filterChipsContainer}>
                     {eventCategories.map((category) => (
@@ -611,7 +620,7 @@ export default function EventsScreen() {
                   <Text style={[
                     styles.filterSectionTitle,
                     isDarkMode && styles.filterSectionTitleDark
-                  ]}>Saved Events</Text>
+                  ]}>{getText('savedEvents')}</Text>
                   
                   <TouchableOpacity
                     style={[
@@ -629,7 +638,7 @@ export default function EventsScreen() {
                       isDarkMode && styles.savedFilterButtonTextDark,
                       filterSettings.saved && styles.savedFilterButtonTextSelected
                     ]}>
-                      Show only saved events
+                      {getText('savedEventsOnly')}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -638,7 +647,7 @@ export default function EventsScreen() {
                   <Text style={[
                     styles.filterSectionTitle,
                     isDarkMode && styles.filterSectionTitleDark
-                  ]}>Language</Text>
+                  ]}>{getText('language')}</Text>
                   
                   <View style={styles.filterChipsContainer}>
                     {languages.map((language) => (
@@ -669,7 +678,7 @@ export default function EventsScreen() {
                   <Text style={[
                     styles.filterSectionTitle,
                     isDarkMode && styles.filterSectionTitleDark
-                  ]}>Denomination</Text>
+                  ]}>{getText('denomination')}</Text>
                   
                   <View style={styles.filterChipsContainer}>
                     {denominations.map((denomination) => (
@@ -700,7 +709,7 @@ export default function EventsScreen() {
                   <Text style={[
                     styles.filterSectionTitle,
                     isDarkMode && styles.filterSectionTitleDark
-                  ]}>Proximity (km)</Text>
+                  ]}>{getText('proximity')}</Text>
                   
                   <View style={styles.proximityContainer}>
                     <TextInput
@@ -737,13 +746,13 @@ export default function EventsScreen() {
                     proximity: 10
                   })}
                 >
-                  <Text style={styles.buttonText}>Reset</Text>
+                  <Text style={styles.buttonText}>{getText('reset')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
                   style={styles.applyButton} 
                   onPress={() => setShowFilterModal(false)}
                 >
-                  <Text style={styles.buttonText}>Apply</Text>
+                  <Text style={styles.buttonText}>{getText('apply')}</Text>
                 </TouchableOpacity>
               </View>
             }
@@ -1031,5 +1040,18 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontSize: 16,
     fontWeight: '600',
+  },
+  errorContainer: {
+    backgroundColor: '#ffebee',
+    padding: 12,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#f44336',
+  },
+  errorText: {
+    color: '#d32f2f',
+    fontSize: 14,
   },
 });

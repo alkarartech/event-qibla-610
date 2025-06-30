@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, Image, Share, Platform, Modal, TextInput, Alert, RefreshControl } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useRouter } from 'expo-router';
-import { MapPin, Calendar, Clock, User, Phone, Share2, Heart, Star, Mail, Bell, BellOff } from 'lucide-react-native';
+import { MapPin, Calendar, Clock, User, Phone, Share2, Heart, Star, Mail, Bell, BellOff, DollarSign } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { globalStyles } from '@/constants/theme';
 import LoadingIndicator from '@/components/LoadingIndicator';
@@ -24,9 +24,11 @@ export default function EventDetailScreen() {
     scheduleEventNotifications,
     cancelEventNotifications,
     hasEventNotifications,
-    refreshSavedEvents
+    refreshSavedEvents,
+    needsFeedback,
+    markEventFeedbackGiven
   } = useEvents();
-  const { isDarkMode, use24HourFormat } = useThemeStore();
+  const { isDarkMode, use24HourFormat, getText } = useThemeStore();
 
   const event = getEventById(id as string);
   const [saved, setSaved] = useState(false);
@@ -34,9 +36,12 @@ export default function EventDetailScreen() {
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [showNotificationConfirmModal, setShowNotificationConfirmModal] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [showDonateModal, setShowDonateModal] = useState(false);
   const [rating, setRating] = useState(5);
   const [feedback, setFeedback] = useState('');
   const [hasAttended, setHasAttended] = useState(false);
+  const [needsEventFeedback, setNeedsEventFeedback] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   
   // Check if event is saved and has notifications
@@ -55,11 +60,21 @@ export default function EventDetailScreen() {
       // If event date has passed, user can rate it
       if (eventDate < today) {
         setHasAttended(true);
+        
+        // Check if we need to show the feedback modal
+        if (needsFeedback(event.id)) {
+          setNeedsEventFeedback(true);
+          
+          // Show feedback modal after a short delay
+          setTimeout(() => {
+            setShowFeedbackModal(true);
+          }, 1000);
+        }
       }
     }
-  }, [event, isEventSaved, hasEventNotifications]);
+  }, [event, isEventSaved, hasEventNotifications, needsFeedback]);
   
-  const onRefresh = React.useCallback(() => {
+  const onRefresh = useCallback(() => {
     setRefreshing(true);
     refreshSavedEvents().then(() => {
       if (event) {
@@ -68,7 +83,7 @@ export default function EventDetailScreen() {
       }
       setRefreshing(false);
     });
-  }, [refreshSavedEvents, event]);
+  }, [refreshSavedEvents, event, isEventSaved, hasEventNotifications]);
 
   const handleMosquePress = () => {
     if (event) {
@@ -221,6 +236,43 @@ Feedback: ${feedback}`;
       "Your feedback has been submitted and sent to the mosque.",
       [{ text: "OK" }]
     );
+  };
+
+  const handleDonatePress = () => {
+    setShowDonateModal(true);
+  };
+  
+  const handleDonateConfirm = () => {
+    // In a real app, this would open a payment gateway
+    setShowDonateModal(false);
+    
+    Alert.alert(
+      "Thank You!",
+      "Your donation will help support the mosque and its activities.",
+      [{ text: "OK" }]
+    );
+  };
+  
+  const submitFeedback = () => {
+    if (!event) return;
+    
+    rateEvent(event.id, rating, feedback);
+    markEventFeedbackGiven(event.id);
+    setNeedsEventFeedback(false);
+    
+    // Send email to mosque with feedback
+    if (event.contact && event.contact.includes('@')) {
+      const subject = `Event Feedback: ${event.title}`;
+      const body = `Event: ${event.title}
+Date: ${event.date}
+Rating: ${rating}/5
+Feedback: ${feedback}`;
+      
+      Linking.openURL(`mailto:${event.contact}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+    }
+    
+    setShowFeedbackModal(false);
+    setShowDonateModal(true);
   };
 
   if (loading) {
@@ -639,6 +691,155 @@ Feedback: ${feedback}`;
           </View>
         </View>
       </Modal>
+
+      {/* Post-Event Feedback Modal */}
+      <Modal
+        visible={showFeedbackModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => {
+          setShowFeedbackModal(false);
+          markEventFeedbackGiven(event?.id || '');
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[
+            styles.ratingModalContent,
+            isDarkMode && styles.ratingModalContentDark
+          ]}>
+            <Text style={[
+              styles.ratingModalTitle,
+              isDarkMode && styles.ratingModalTitleDark
+            ]}>
+              {getText('feedbackTitle')}
+            </Text>
+            
+            <View style={styles.starsContainer}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <TouchableOpacity
+                  key={star}
+                  onPress={() => setRating(star)}
+                >
+                  <Star
+                    size={36}
+                    color={Colors.primary}
+                    fill={star <= rating ? Colors.primary : 'none'}
+                    style={styles.starIcon}
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+            
+            <Text style={[
+              styles.feedbackLabel,
+              isDarkMode && styles.feedbackLabelDark
+            ]}>
+              {getText('feedbackPrompt')}
+            </Text>
+            
+            <TextInput
+              style={[
+                styles.feedbackInput,
+                isDarkMode && styles.feedbackInputDark
+              ]}
+              placeholder="Share your experience..."
+              placeholderTextColor={isDarkMode ? '#777' : '#999'}
+              value={feedback}
+              onChangeText={setFeedback}
+              multiline
+              numberOfLines={4}
+            />
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => {
+                  setShowFeedbackModal(false);
+                  markEventFeedbackGiven(event?.id || '');
+                }}
+              >
+                <Text style={styles.cancelButtonText}>{getText('cancel')}</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.submitButton}
+                onPress={submitFeedback}
+              >
+                <Text style={styles.submitButtonText}>{getText('submitFeedback')}</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.emailInfoContainer}>
+              <Mail size={16} color={isDarkMode ? '#AAA' : '#777'} />
+              <Text style={[
+                styles.emailInfoText,
+                isDarkMode && styles.emailInfoTextDark
+              ]}>
+                {getText('feedbackThankYou')}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      
+      {/* Donation Modal */}
+      <Modal
+        visible={showDonateModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowDonateModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[
+            styles.donateModalContent,
+            isDarkMode && styles.donateModalContentDark
+          ]}>
+            <DollarSign size={40} color={Colors.primary} style={styles.donateIcon} />
+            
+            <Text style={[
+              styles.donateModalTitle,
+              isDarkMode && styles.donateModalTitleDark
+            ]}>
+              {getText('donatePrompt')}
+            </Text>
+            
+            <Text style={[
+              styles.donateModalText,
+              isDarkMode && styles.donateModalTextDark
+            ]}>
+              Your contribution helps support community programs and mosque maintenance.
+            </Text>
+            
+            <View style={styles.donateAmountContainer}>
+              {[5, 10, 20, 50, 100].map((amount) => (
+                <TouchableOpacity
+                  key={amount}
+                  style={styles.donateAmountButton}
+                  onPress={handleDonateConfirm}
+                >
+                  <Text style={styles.donateAmountText}>${amount}</Text>
+                </TouchableOpacity>
+              ))}
+              
+              <TouchableOpacity
+                style={styles.donateCustomButton}
+                onPress={handleDonateConfirm}
+              >
+                <Text style={styles.donateCustomText}>Custom</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setShowDonateModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>{getText('maybeLater')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -930,5 +1131,69 @@ const styles = StyleSheet.create({
   },
   notificationModalSubtextDark: {
     color: '#AAAAAA',
+  },
+  donateModalContent: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 24,
+    width: '85%',
+    alignItems: 'center',
+    ...globalStyles.shadow,
+  },
+  donateModalContentDark: {
+    backgroundColor: '#1E1E1E',
+  },
+  donateIcon: {
+    marginBottom: 16,
+  },
+  donateModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.text,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  donateModalTitleDark: {
+    color: Colors.white,
+  },
+  donateModalText: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  donateModalTextDark: {
+    color: '#AAAAAA',
+  },
+  donateAmountContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    marginBottom: 24,
+    gap: 10,
+  },
+  donateAmountButton: {
+    backgroundColor: Colors.primaryLight,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    margin: 4,
+  },
+  donateAmountText: {
+    color: Colors.primary,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  donateCustomButton: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    margin: 4,
+  },
+  donateCustomText: {
+    color: Colors.white,
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

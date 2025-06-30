@@ -18,8 +18,8 @@ import { formatTime } from '@/utils/dateUtils';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { location, locationName, loading: locationLoading } = useLocation();
-  const { isDarkMode, use24HourFormat } = useThemeStore();
+  const { location, locationName, loading: locationLoading, error: locationError } = useLocation();
+  const { isDarkMode, use24HourFormat, getText } = useThemeStore();
   
   const { nearbyMosques, favoriteMosques, loading: mosquesLoading, refreshFavoriteMosques } = useMosques(
     location?.coords?.latitude,
@@ -108,7 +108,7 @@ export default function HomeScreen() {
         <Text style={[
           styles.welcomeTitle,
           isDarkMode && styles.welcomeTitleDark
-        ]}>Assalamu Alaikum</Text>
+        ]}>{getText('welcome')}</Text>
         
         <TouchableOpacity 
           style={styles.calendarButton}
@@ -121,7 +121,13 @@ export default function HomeScreen() {
       <Text style={[
         styles.welcomeSubtitle,
         isDarkMode && styles.welcomeSubtitleDark
-      ]}>Find mosques and events near you</Text>
+      ]}>{getText('welcomeSubtitle')}</Text>
+
+      {locationError && (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{locationError}</Text>
+        </View>
+      )}
 
       {isLoading ? (
         <LoadingIndicator message="Finding mosques and events near you..." />
@@ -133,12 +139,12 @@ export default function HomeScreen() {
               <Text style={[
                 styles.sectionTitle,
                 isDarkMode && styles.sectionTitleDark
-              ]}>Upcoming Events</Text>
+              ]}>{getText('upcomingEvents')}</Text>
               <TouchableOpacity 
                 style={styles.seeAllButton}
                 onPress={handleSeeAllEvents}
               >
-                <Text style={styles.seeAllText}>See All</Text>
+                <Text style={styles.seeAllText}>{getText('seeAll')}</Text>
                 <ChevronRight size={16} color={Colors.primary} />
               </TouchableOpacity>
             </View>
@@ -201,12 +207,12 @@ export default function HomeScreen() {
                 <Text style={[
                   styles.sectionTitle,
                   isDarkMode && styles.sectionTitleDark
-                ]}>Your Saved Events</Text>
+                ]}>{getText('savedEvents')}</Text>
                 <TouchableOpacity 
                   style={styles.seeAllButton}
                   onPress={handleSeeAllEvents}
                 >
-                  <Text style={styles.seeAllText}>See All</Text>
+                  <Text style={styles.seeAllText}>{getText('seeAll')}</Text>
                   <ChevronRight size={16} color={Colors.primary} />
                 </TouchableOpacity>
               </View>
@@ -229,12 +235,12 @@ export default function HomeScreen() {
                 <Text style={[
                   styles.sectionTitle,
                   isDarkMode && styles.sectionTitleDark
-                ]}>Your Favorite Mosques</Text>
+                ]}>{getText('favoriteMosques')}</Text>
                 <TouchableOpacity 
                   style={styles.seeAllButton}
                   onPress={handleSeeAllFavoriteMosques}
                 >
-                  <Text style={styles.seeAllText}>See All</Text>
+                  <Text style={styles.seeAllText}>{getText('seeAll')}</Text>
                   <ChevronRight size={16} color={Colors.primary} />
                 </TouchableOpacity>
               </View>
@@ -256,12 +262,12 @@ export default function HomeScreen() {
               <Text style={[
                 styles.sectionTitle,
                 isDarkMode && styles.sectionTitleDark
-              ]}>Nearby Mosques</Text>
+              ]}>{getText('nearbyMosques')}</Text>
               <TouchableOpacity 
                 style={styles.seeAllButton}
                 onPress={() => router.push('/mosques')}
               >
-                <Text style={styles.seeAllText}>See All</Text>
+                <Text style={styles.seeAllText}>{getText('seeAll')}</Text>
                 <ChevronRight size={16} color={Colors.primary} />
               </TouchableOpacity>
             </View>
@@ -296,19 +302,19 @@ export default function HomeScreen() {
           <Text style={[
             styles.prayerTimesTitle,
             isDarkMode && styles.prayerTimesTitleDark
-          ]}>Prayer Times</Text>
+          ]}>{getText('prayerTimes')}</Text>
           <Text style={[
             styles.prayerTimesSubtitle,
             isDarkMode && styles.prayerTimesSubtitleDark
           ]}>
-            Check prayer times at your nearest mosque
+            {getText('prayerTimesSubtitle')}
           </Text>
         </View>
         <TouchableOpacity 
           style={styles.prayerTimesButton}
           onPress={() => router.push('/mosques')}
         >
-          <Text style={styles.prayerTimesButtonText}>View</Text>
+          <Text style={styles.prayerTimesButtonText}>{getText('view')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -431,6 +437,19 @@ const styles = StyleSheet.create({
   },
   upcomingEventLocationDark: {
     color: '#AAAAAA',
+  },
+  errorContainer: {
+    backgroundColor: '#ffebee',
+    padding: 12,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#f44336',
+  },
+  errorText: {
+    color: '#d32f2f',
+    fontSize: 14,
   },
   prayerTimesCard: {
     flexDirection: 'row',

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Switch, ScrollView, Linking, 
 import { ChevronRight, Bell, Moon, Info, Heart, Clock, Globe, X } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { globalStyles } from '@/constants/theme';
-import useThemeStore from '@/hooks/useThemeStore';
+import useThemeStore, { Language } from '@/hooks/useThemeStore';
 
 // Available languages
 const languages = [
@@ -15,7 +15,7 @@ const languages = [
 ];
 
 export default function SettingsScreen() {
-  const { isDarkMode, toggleDarkMode, use24HourFormat, toggleTimeFormat, language, setLanguage } = useThemeStore();
+  const { isDarkMode, toggleDarkMode, use24HourFormat, toggleTimeFormat, language, setLanguage, getText } = useThemeStore();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
 
@@ -34,7 +34,7 @@ export default function SettingsScreen() {
   };
 
   const handleLanguageSelect = (langId: string) => {
-    setLanguage(langId);
+    setLanguage(langId as Language);
     setShowLanguageModal(false);
   };
 
@@ -88,31 +88,31 @@ export default function SettingsScreen() {
         <Text style={[
           styles.sectionTitle,
           isDarkMode && styles.sectionTitleDark
-        ]}>Preferences</Text>
+        ]}>{getText('preferences')}</Text>
         {renderSettingItem(
           <Bell size={20} color={Colors.primary} />,
-          'Notifications',
+          getText('notifications'),
           true,
           notificationsEnabled,
           toggleNotifications
         )}
         {renderSettingItem(
           <Moon size={20} color={Colors.primary} />,
-          'Dark Mode',
+          getText('darkMode'),
           true,
           isDarkMode,
           toggleDarkMode
         )}
         {renderSettingItem(
           <Clock size={20} color={Colors.primary} />,
-          use24HourFormat ? '24-hour Time Format' : '12-hour Time Format',
+          use24HourFormat ? getText('timeFormat24') : getText('timeFormat12'),
           true,
           use24HourFormat,
           toggleTimeFormat
         )}
         {renderSettingItem(
           <Globe size={20} color={Colors.primary} />,
-          `Language: ${getLanguageName()}`,
+          `${getText('languageSetting')}: ${getLanguageName()}`,
           false,
           undefined,
           undefined,
@@ -124,10 +124,10 @@ export default function SettingsScreen() {
         <Text style={[
           styles.sectionTitle,
           isDarkMode && styles.sectionTitleDark
-        ]}>About</Text>
+        ]}>{getText('about')}</Text>
         {renderSettingItem(
           <Info size={20} color={Colors.primary} />,
-          'About Mosque Finder',
+          getText('aboutMosqueFinder'),
           false,
           undefined,
           undefined,
@@ -135,7 +135,7 @@ export default function SettingsScreen() {
         )}
         {renderSettingItem(
           <Heart size={20} color={Colors.primary} />,
-          'Rate the App',
+          getText('rateApp'),
           false,
           undefined,
           undefined,
@@ -147,7 +147,7 @@ export default function SettingsScreen() {
         <Text style={[
           styles.version,
           isDarkMode && styles.versionDark
-        ]}>Version 1.0.0</Text>
+        ]}>{getText('version')} 1.0.0</Text>
       </View>
 
       {/* Language Selection Modal */}
@@ -166,7 +166,7 @@ export default function SettingsScreen() {
               <Text style={[
                 styles.modalTitle,
                 isDarkMode && styles.modalTitleDark
-              ]}>Select Language</Text>
+              ]}>{getText('selectLanguage')}</Text>
               <TouchableOpacity onPress={() => setShowLanguageModal(false)}>
                 <X size={24} color={isDarkMode ? Colors.white : Colors.text} />
               </TouchableOpacity>

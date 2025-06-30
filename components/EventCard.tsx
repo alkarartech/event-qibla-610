@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Calendar, Clock, MapPin, Heart, Bell, BellOff } from 'lucide-react-native';
@@ -16,27 +16,40 @@ interface EventCardProps {
 export default function EventCard({ event, compact = false }: EventCardProps) {
   const router = useRouter();
   const { isEventSaved, saveEvent, unsaveEvent, hasEventNotifications, scheduleEventNotifications, cancelEventNotifications } = useEvents();
-  const { use24HourFormat, isDarkMode } = useThemeStore();
-  const isSaved = isEventSaved(event.id);
-  const hasNotifications = hasEventNotifications(event.id);
+  const { use24HourFormat, isDarkMode, getText } = useThemeStore();
+  const [isSaved, setIsSaved] = useState(false);
+  const [hasNotifs, setHasNotifs] = useState(false);
+
+  // Update saved and notification status when they change
+  useEffect(() => {
+    setIsSaved(isEventSaved(event.id));
+    setHasNotifs(hasEventNotifications(event.id));
+  }, [event.id, isEventSaved, hasEventNotifications]);
 
   const handlePress = () => {
     router.push(`/event/${event.id}`);
   };
 
-  const handleSaveToggle = (e: any) => {
+  const handleSaveToggle = async (e: any) => {
     e.stopPropagation();
     if (isSaved) {
-      unsaveEvent(event.id);
+      const success = await unsaveEvent(event.id);
+      if (success) {
+        setIsSaved(false);
+        setHasNotifs(false);
+      }
     } else {
-      saveEvent(event.id);
+      const success = await saveEvent(event.id);
+      if (success) {
+        setIsSaved(true);
+      }
     }
   };
   
-  const handleNotificationToggle = (e: any) => {
+  const handleNotificationToggle = async (e: any) => {
     e.stopPropagation();
     
-    if (hasNotifications) {
+    if (hasNotifs) {
       Alert.alert(
         "Turn Off Notifications",
         "Are you sure you want to turn off notifications for this event?",
@@ -45,19 +58,29 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
           { 
             text: "Turn Off", 
             style: "destructive",
-            onPress: () => cancelEventNotifications(event.id)
+            onPress: async () => {
+              const success = await cancelEventNotifications(event.id);
+              if (success) {
+                setHasNotifs(false);
+              }
+            }
           }
         ]
       );
     } else {
       Alert.alert(
         "Turn On Notifications",
-        "Would you like to receive notifications for this event?\n\nYou'll be notified:\n• One day before the event\n• Two hours before the event starts",
+        "Would you like to receive notifications for this event?\n\nYou'll be notified:\n• One day before the event\n• Two hours before the event starts\n• After the event for feedback",
         [
           { text: "Cancel", style: "cancel" },
           { 
             text: "Turn On", 
-            onPress: () => scheduleEventNotifications(event.id)
+            onPress: async () => {
+              const success = await scheduleEventNotifications(event.id);
+              if (success) {
+                setHasNotifs(true);
+              }
+            }
           }
         ]
       );
@@ -207,7 +230,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                 style={styles.actionButton} 
                 onPress={handleNotificationToggle}
               >
-                {hasNotifications ? (
+                {hasNotifs ? (
                   <Bell size={20} color={Colors.primary} fill={Colors.primary} />
                 ) : (
                   <BellOff size={20} color={isDarkMode ? Colors.white : Colors.textSecondary} />
