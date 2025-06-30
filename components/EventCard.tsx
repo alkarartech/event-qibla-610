@@ -10,10 +10,11 @@ import useThemeStore from '@/hooks/useThemeStore';
 
 interface EventCardProps {
   event: Event;
-  compact?: boolean;
+  showDistance?: boolean;
+  distance?: number;
 }
 
-export default function EventCard({ event, compact = false }: EventCardProps) {
+export default function EventCard({ event, showDistance, distance }: EventCardProps) {
   const router = useRouter();
   const { isEventSaved, saveEvent, unsaveEvent, hasEventNotifications, scheduleEventNotifications, cancelEventNotifications } = useEvents();
   const { use24HourFormat, isDarkMode, getText } = useThemeStore();
@@ -211,10 +212,17 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
         
         <View style={styles.detailRow}>
           <MapPin size={16} color={isDarkMode ? Colors.white : Colors.textSecondary} />
-          <Text style={[
-            styles.detailText,
-            isDarkMode && styles.detailTextDark
-          ]} numberOfLines={1}>{event.mosque_name}</Text>
+          <View style={styles.locationContainer}>
+            <MapPin size={14} color={Colors.textSecondary} />
+            <Text style={[styles.locationText, isDarkMode && styles.locationTextDark]}>
+              {event.mosque_name}
+            </Text>
+            {showDistance && distance !== undefined && (
+              <Text style={[styles.distanceText, isDarkMode && styles.distanceTextDark]}>
+                • {(distance * 0.621371).toFixed(1)} mi
+              </Text>
+            )}
+          </View>
         </View>
         
         <View style={styles.footer}>
@@ -356,5 +364,26 @@ const styles = StyleSheet.create({
   },
   compactDetailTextDark: {
     color: '#AAAAAA',
+  },
+  locationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  locationText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginLeft: 4,
+  },
+  locationTextDark: {
+    color: '#AAAAAA',
+  },
+  distanceText: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginLeft: 4,
+  },
+  distanceTextDark: {
+    color: '#999999',
   },
 });

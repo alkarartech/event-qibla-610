@@ -10,10 +10,11 @@ import useThemeStore from '@/hooks/useThemeStore';
 
 interface MosqueCardProps {
   mosque: Mosque;
-  compact?: boolean;
+  showDistance?: boolean;
+  distance?: number;
 }
 
-export default function MosqueCard({ mosque, compact = false }: MosqueCardProps) {
+export default function MosqueCard({ mosque, showDistance, distance }: MosqueCardProps) {
   const router = useRouter();
   const { isMosqueFavorite, toggleFavoriteMosque } = useMosques();
   const { isDarkMode } = useThemeStore();
@@ -28,7 +29,7 @@ export default function MosqueCard({ mosque, compact = false }: MosqueCardProps)
     toggleFavoriteMosque(mosque.id);
   };
 
-  if (compact) {
+  if (showDistance && distance !== undefined) {
     return (
       <TouchableOpacity 
         style={[
@@ -256,5 +257,26 @@ const styles = StyleSheet.create({
   },
   compactDistanceDark: {
     color: '#AAAAAA',
+  },
+  addressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  addressText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    flex: 1,
+  },
+  addressTextDark: {
+    color: '#AAAAAA',
+  },
+  distanceText: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginLeft: 4,
+  },
+  distanceTextDark: {
+    color: '#999999',
   },
 });

@@ -259,7 +259,6 @@ export default function useEvents(
             data: { eventId },
           },
           trigger: {
-            type: 'timeInterval',
             seconds: Math.floor((dayBeforeDate.getTime() - now.getTime()) / 1000),
           },
         });
@@ -274,7 +273,6 @@ export default function useEvents(
             data: { eventId },
           },
           trigger: {
-            type: 'timeInterval',
             seconds: Math.floor((twoHoursBeforeDate.getTime() - now.getTime()) / 1000),
           },
         });
@@ -293,7 +291,6 @@ export default function useEvents(
             data: { eventId, type: 'feedback' },
           },
           trigger: {
-            type: 'timeInterval',
             seconds: Math.floor((postEventDate.getTime() - now.getTime()) / 1000),
           },
         });

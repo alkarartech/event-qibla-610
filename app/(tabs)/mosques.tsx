@@ -85,6 +85,17 @@ export default function MosquesScreen() {
         );
         return distanceA - distanceB;
       });
+      
+      // Add distance property to mosques for display
+      mosques = mosques.map(mosque => ({
+        ...mosque,
+        distance: calculateDistance(
+          location.coords.latitude,
+          location.coords.longitude,
+          mosque.latitude,
+          mosque.longitude
+        )
+      }));
     }
     
     setFilteredMosques(mosques);
@@ -125,7 +136,11 @@ export default function MosquesScreen() {
   const isLoading = locationLoading || mosquesLoading;
 
   const renderMosqueItem = ({ item }: { item: Mosque }) => (
-    <MosqueCard mosque={item} />
+    <MosqueCard 
+      mosque={item} 
+      showDistance={sortBy === 'distance' && location}
+      distance={item.distance}
+    />
   );
 
   return (

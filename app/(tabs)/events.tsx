@@ -182,6 +182,17 @@ export default function EventsScreen() {
         );
         return distanceA - distanceB;
       });
+      
+      // Add distance property to events for display
+      events = events.map(event => ({
+        ...event,
+        distance: calculateDistance(
+          location.coords.latitude,
+          location.coords.longitude,
+          event.latitude,
+          event.longitude
+        )
+      }));
     } else if (sortBy === 'date') {
       events = [...events].sort((a, b) => 
         new Date(a.date).getTime() - new Date(b.date).getTime()
@@ -387,7 +398,13 @@ export default function EventsScreen() {
       ) : (
         <FlatList
           data={filteredEvents}
-          renderItem={({ item }) => <EventCard event={item} />}
+          renderItem={({ item }) => (
+            <EventCard 
+              event={item} 
+              showDistance={sortBy === 'distance' && location}
+              distance={item.distance}
+            />
+          )}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           refreshControl={
