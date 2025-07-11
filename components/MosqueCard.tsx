@@ -12,9 +12,10 @@ interface MosqueCardProps {
   mosque: Mosque;
   showDistance?: boolean;
   distance?: number;
+  compact?: boolean;
 }
 
-export default function MosqueCard({ mosque, showDistance, distance }: MosqueCardProps) {
+export default function MosqueCard({ mosque, showDistance, distance, compact }: MosqueCardProps) {
   const router = useRouter();
   const { isMosqueFavorite, toggleFavoriteMosque } = useMosques();
   const { isDarkMode } = useThemeStore();
@@ -29,7 +30,7 @@ export default function MosqueCard({ mosque, showDistance, distance }: MosqueCar
     toggleFavoriteMosque(mosque.id);
   };
 
-  if (showDistance && distance !== undefined) {
+  if (compact || (showDistance && distance !== undefined)) {
     return (
       <TouchableOpacity 
         style={[

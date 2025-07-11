@@ -65,7 +65,7 @@ export default function HomeScreen() {
   }, [refreshSavedEvents, refreshFavoriteMosques]);
 
   const renderMosqueItem = ({ item }: { item: Mosque }) => (
-    <MosqueCard mosque={item} compact />
+    <MosqueCard mosque={item} compact={true} />
   );
 
   const renderEventItem = ({ item }: { item: Event }) => (

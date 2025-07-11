@@ -10,7 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { X, Heart, DollarSign } from 'lucide-react-native';
-import { colors } from '@/constants/colors';
+import Colors from '@/constants/colors';
 
 interface DonationModalProps {
   visible: boolean;
@@ -79,13 +79,13 @@ export const DonationModal: React.FC<DonationModalProps> = ({
         <View style={styles.header}>
           <Text style={styles.title}>Donate to {mosqueName}</Text>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <X size={24} color={colors.text} />
+            <X size={24} color={Colors.text} />
           </TouchableOpacity>
         </View>
 
         <View style={styles.content}>
           <View style={styles.iconContainer}>
-            <Heart size={48} color={colors.primary} fill={colors.primary} />
+            <Heart size={48} color={Colors.primary} fill={Colors.primary} />
           </View>
 
           <Text style={styles.description}>
@@ -118,14 +118,14 @@ export const DonationModal: React.FC<DonationModalProps> = ({
 
           <Text style={styles.sectionTitle}>Custom Amount</Text>
           <View style={styles.inputContainer}>
-            <DollarSign size={20} color={colors.textSecondary} />
+            <DollarSign size={20} color={Colors.textSecondary} />
             <TextInput
               style={styles.input}
               value={amount}
               onChangeText={setAmount}
               placeholder="Enter amount"
               keyboardType="numeric"
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor={Colors.textSecondary}
             />
           </View>
 
@@ -151,7 +151,7 @@ export const DonationModal: React.FC<DonationModalProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: Colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -160,12 +160,12 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 20,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: Colors.border,
   },
   title: {
     fontSize: 20,
     fontWeight: '600',
-    color: colors.text,
+    color: Colors.text,
     flex: 1,
   },
   closeButton: {
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 16,
-    color: colors.textSecondary,
+    color: Colors.textSecondary,
     textAlign: 'center',
     marginBottom: 30,
     lineHeight: 24,
@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: colors.text,
+    color: Colors.text,
     marginBottom: 15,
   },
   predefinedAmounts: {
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
   amountButtonText: {
     fontSize: 16,
     fontWeight: '500',
-    color: colors.text,
+    color: Colors.text,
   },
   selectedAmountButtonText: {
     color: 'white',
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: colors.text,
+    color: Colors.text,
     marginLeft: 8,
   },
   donateButton: {
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
   },
   disclaimer: {
     fontSize: 12,
-    color: colors.textSecondary,
+    color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: 18,
   },
