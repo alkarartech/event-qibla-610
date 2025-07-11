@@ -47,10 +47,10 @@ const useThemeStore = create<ThemeState>()(
       getText: (key) => {
         const { language } = get();
         // Get the translations for the current language
-        const langTranslations = translations[language] || translations.en;
+        const langTranslations = translations[language] || translations['en'];
         
         // Return the translation or fallback to English or the key itself
-        return langTranslations[key] || translations.en[key] || key;
+        return langTranslations?.[key] || translations['en']?.[key] || key;
       }
     }),
     {

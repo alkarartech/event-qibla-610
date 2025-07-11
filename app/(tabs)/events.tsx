@@ -401,7 +401,7 @@ export default function EventsScreen() {
           renderItem={({ item }) => (
             <EventCard 
               event={item} 
-              showDistance={sortBy === 'distance' && location !== null && location !== false}
+              showDistance={sortBy === 'distance' && location !== null && location !== false && typeof location === 'object'}
               distance={item.distance}
             />
           )}

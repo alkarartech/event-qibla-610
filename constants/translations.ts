@@ -5,11 +5,7 @@ interface TranslationDictionary {
 }
 
 export interface Translations {
-  en: TranslationDictionary;
-  ar: TranslationDictionary;
-  ur: TranslationDictionary;
-  fa: TranslationDictionary;
-  tr: TranslationDictionary;
+  [key: string]: TranslationDictionary;
 }
 
 const translations: Translations = {
