@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, ScrollView } from 'react-native';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import Colors from '@/constants/colors';
-import { Event } from '@/mocks/events';
+import { Event } from '@/data/events';
 import useThemeStore from '@/hooks/useThemeStore';
 
 interface CalendarViewProps {

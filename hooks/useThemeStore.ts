@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Colors from '@/constants/colors';
-import translations from '@/constants/translations';
+import translations, { Translations } from '@/constants/translations';
 
 export type Language = 'en' | 'ar' | 'ur' | 'fa' | 'tr';
 
@@ -47,10 +47,10 @@ const useThemeStore = create<ThemeState>()(
       getText: (key) => {
         const { language } = get();
         // Get the translations for the current language
-        const langTranslations = translations[language] || translations['en'];
+        const langTranslations = translations[language as keyof Translations] || translations.en;
         
         // Return the translation or fallback to English or the key itself
-        return langTranslations[key] || translations['en'][key] || key;
+        return langTranslations[key] || translations.en[key] || key;
       }
     }),
     {

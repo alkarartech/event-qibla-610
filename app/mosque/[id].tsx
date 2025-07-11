@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, Image } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { MapPin, Phone, Globe, Clock, Calendar, ChevronRight, DollarSign, Heart } from 'lucide-react-native';
@@ -8,6 +8,7 @@ import PrayerTimesCard from '@/components/PrayerTimesCard';
 import EventCard from '@/components/EventCard';
 import LoadingIndicator from '@/components/LoadingIndicator';
 import EmptyState from '@/components/EmptyState';
+import { DonationModal } from '@/components/DonationModal';
 import useMosques from '@/hooks/useMosques';
 import useEvents from '@/hooks/useEvents';
 import { getPrayerTimes } from '@/utils/prayerTimes';
@@ -18,6 +19,7 @@ export default function MosqueDetailScreen() {
   const { getMosqueById, loading: mosquesLoading, isMosqueFavorite, toggleFavoriteMosque } = useMosques();
   const { getEventsByMosqueId, loading: eventsLoading } = useEvents();
   const { isDarkMode, use24HourFormat } = useThemeStore();
+  const [showDonationModal, setShowDonationModal] = useState(false);
 
   const mosque = getMosqueById(id as string);
   const mosqueEvents = mosque ? getEventsByMosqueId(mosque.id) : [];
@@ -49,8 +51,10 @@ export default function MosqueDetailScreen() {
   };
 
   const handleDonatePress = () => {
-    if (mosque?.website) {
-      // In a real app, this would go to the mosque's donation page
+    if (mosque?.donationEnabled && mosque?.stripePublishableKey) {
+      setShowDonationModal(true);
+    } else if (mosque?.website) {
+      // Fallback to website donation page
       Linking.openURL(`https://${mosque.website}/donate`);
     } else {
       // Generic donation page
@@ -342,6 +346,13 @@ export default function MosqueDetailScreen() {
           </View>
         )}
       </View>
+      
+      <DonationModal
+        visible={showDonationModal}
+        onClose={() => setShowDonationModal(false)}
+        mosqueName={mosque.name}
+        stripePublishableKey={mosque.stripePublishableKey}
+      />
     </ScrollView>
   );
 }

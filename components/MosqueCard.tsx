@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MapPin, Clock, Star, Heart } from 'lucide-react-native';
 import Colors from '@/constants/colors';
-import { Mosque } from '@/mocks/mosques';
+import { Mosque } from '@/data/mosques';
 import { globalStyles } from '@/constants/theme';
 import useMosques from '@/hooks/useMosques';
 import useThemeStore from '@/hooks/useThemeStore';

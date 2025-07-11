@@ -6,7 +6,7 @@ import Colors from '@/constants/colors';
 import { globalStyles } from '@/constants/theme';
 import useThemeStore from '@/hooks/useThemeStore';
 import useEvents from '@/hooks/useEvents';
-import { Event } from '@/mocks/events';
+import { Event } from '@/data/events';
 import { 
   gregorianToHijri, 
   hijriMonthNames, 

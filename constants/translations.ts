@@ -4,7 +4,15 @@ interface TranslationDictionary {
   [key: string]: string;
 }
 
-const translations: Record<Language, TranslationDictionary> = {
+export interface Translations {
+  en: TranslationDictionary;
+  ar: TranslationDictionary;
+  ur: TranslationDictionary;
+  fa: TranslationDictionary;
+  tr: TranslationDictionary;
+}
+
+const translations: Translations = {
   en: {
     // Common
     welcome: 'Assalamu Alaikum',

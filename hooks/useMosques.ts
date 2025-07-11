@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { mosques, Mosque } from '@/mocks/mosques';
+import { mosques, Mosque } from '@/data/mosques';
 import { getMosquesWithinRadius } from '@/utils/location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 

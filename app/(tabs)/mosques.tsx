@@ -12,7 +12,7 @@ import LocationSelector from '@/components/LocationSelector';
 import useLocation from '@/hooks/useLocation';
 import useMosques from '@/hooks/useMosques';
 import useThemeStore from '@/hooks/useThemeStore';
-import { Mosque } from '@/mocks/mosques';
+import { Mosque } from '@/data/mosques';
 
 export default function MosquesScreen() {
   const { location, locationName, loading: locationLoading, error: locationError } = useLocation();
@@ -138,7 +138,7 @@ export default function MosquesScreen() {
   const renderMosqueItem = ({ item }: { item: Mosque }) => (
     <MosqueCard 
       mosque={item} 
-      showDistance={sortBy === 'distance' && location}
+      showDistance={sortBy === 'distance' && !!location}
       distance={item.distance}
     />
   );

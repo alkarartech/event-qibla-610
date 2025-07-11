@@ -1,6 +1,6 @@
 import * as Location from 'expo-location';
 import { Platform } from 'react-native';
-import { Mosque } from '@/mocks/mosques';
+import { Mosque } from '@/data/mosques';
 
 // Calculate distance between two coordinates using Haversine formula
 export const calculateDistance = (

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { events, Event } from '@/mocks/events';
+import { events, Event } from '@/data/events';
 import { calculateDistance } from '@/utils/location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
@@ -259,7 +259,6 @@ export default function useEvents(
             data: { eventId },
           },
           trigger: {
-            type: 'timeInterval',
             seconds: Math.floor((dayBeforeDate.getTime() - now.getTime()) / 1000),
           },
         });
@@ -274,7 +273,6 @@ export default function useEvents(
             data: { eventId },
           },
           trigger: {
-            type: 'timeInterval',
             seconds: Math.floor((twoHoursBeforeDate.getTime() - now.getTime()) / 1000),
           },
         });
@@ -293,7 +291,6 @@ export default function useEvents(
             data: { eventId, type: 'feedback' },
           },
           trigger: {
-            type: 'timeInterval',
             seconds: Math.floor((postEventDate.getTime() - now.getTime()) / 1000),
           },
         });

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Image, Alert } from 'react-na
 import { useRouter } from 'expo-router';
 import { Calendar, Clock, MapPin, Heart, Bell, BellOff } from 'lucide-react-native';
 import Colors from '@/constants/colors';
-import { Event } from '@/mocks/events';
+import { Event } from '@/data/events';
 import { globalStyles } from '@/constants/theme';
 import useEvents from '@/hooks/useEvents';
 import useThemeStore from '@/hooks/useThemeStore';
@@ -143,9 +143,9 @@ export default function EventCard({ event, showDistance, distance, compact }: Ev
         onPress={handlePress}
         activeOpacity={0.7}
       >
-        {event.image_url && (
+        {(event.image_url || event.image) && (
           <Image 
-            source={{ uri: event.image_url }} 
+            source={{ uri: event.image_url || event.image }} 
             style={styles.compactImage} 
             resizeMode="cover"
           />
@@ -182,9 +182,9 @@ export default function EventCard({ event, showDistance, distance, compact }: Ev
       onPress={handlePress}
       activeOpacity={0.7}
     >
-      {event.image_url && (
+      {(event.image_url || event.image) && (
         <Image 
-          source={{ uri: event.image_url }} 
+          source={{ uri: event.image_url || event.image }} 
           style={styles.image} 
           resizeMode="cover"
         />
@@ -214,7 +214,6 @@ export default function EventCard({ event, showDistance, distance, compact }: Ev
         <View style={styles.detailRow}>
           <MapPin size={16} color={isDarkMode ? Colors.white : Colors.textSecondary} />
           <View style={styles.locationContainer}>
-            <MapPin size={14} color={Colors.textSecondary} />
             <Text style={[styles.locationText, isDarkMode && styles.locationTextDark]}>
               {event.mosque_name}
             </Text>

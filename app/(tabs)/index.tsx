@@ -11,8 +11,8 @@ import EmptyState from '@/components/EmptyState';
 import useLocation from '@/hooks/useLocation';
 import useMosques from '@/hooks/useMosques';
 import useEvents from '@/hooks/useEvents';
-import { Mosque } from '@/mocks/mosques';
-import { Event } from '@/mocks/events';
+import { Mosque } from '@/data/mosques';
+import { Event } from '@/data/events';
 import useThemeStore from '@/hooks/useThemeStore';
 import { formatTime } from '@/utils/dateUtils';
 
